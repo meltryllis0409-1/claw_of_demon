@@ -1,0 +1,36 @@
+{
+  "sigils": [
+    {
+      "id": "flat_damage_20",
+      "name": "鐵刃",
+      "type": "flat_damage",
+      "value": 20,
+      "cost": 30,
+      "desc": "每次攻擊 +20 傷害"
+    },
+    {
+      "id": "steadfast",
+      "name": "堅毅",
+      "type": "regen_per_turn",
+      "value": 1,
+      "cost": 40,
+      "desc": "每次行動前回復 1 HP"
+    },
+    {
+      "id": "thief",
+      "name": "竊盜高手",
+      "type": "theft",
+      "value": 75,
+      "cost": 60,
+      "desc": "每 75 傷害 +1 金幣"
+    },
+    {
+      "id": "unity",
+      "name": "團結一心",
+      "type": "five_card_multiplier",
+      "value": 125,
+      "cost": 60,
+      "desc": "用 5 張牌成型（非單挑）傷害 125%"
+    }
+  ]
+}

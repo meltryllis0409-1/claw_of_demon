@@ -1,0 +1,74 @@
+{
+  "enemies": [
+    {
+      "id": "training_dummy",
+      "tier": "training",
+      "name": "訓練假人",
+      "hp": 9999,
+      "attack_damage": 0,
+      "attack_timer": 1
+    },
+    {
+      "id": "gellzunk",
+      "tier": "normal",
+      "name": "格爾準克",
+      "hp": 350,
+      "attack_damage": 3,
+      "attack_timer": 3
+    },
+    {
+      "id": "bison",
+      "tier": "normal",
+      "name": "野牛",
+      "hp": 550,
+      "attack_damage": 2,
+      "attack_timer": 3
+    },
+    {
+      "id": "prairie_snake",
+      "tier": "normal",
+      "name": "莽原蛇",
+      "hp": 240,
+      "attack_damage": 3,
+      "attack_timer": 1
+    },
+    {
+      "id": "elite_blood_gellzunk",
+      "tier": "elite",
+      "name": "渴血的格爾準克",
+      "hp": 550,
+      "attack_damage": 3,
+      "attack_timer": 3,
+      "heal_on_attack": 20
+    },
+    {
+      "id": "elite_rage_gellzunk",
+      "tier": "elite",
+      "name": "狂躁的格爾準克",
+      "hp": 600,
+      "attack_damage": 5,
+      "attack_timer": 1,
+      "frenzy_hp_threshold": 100,
+      "frenzy_attacks": 2
+    },
+    {
+      "id": "vigilant_exarch",
+      "tier": "boss",
+      "name": "警惕的執政者 (Vigilant Exarch)",
+      "hp": 1950,
+      "attack_damage": 8,
+      "attack_timer": 2,
+      "disable_suit_on_attack": true,
+      "disable_suit_turns": 2
+    },
+    {
+      "id": "sadistic_dragon_knight",
+      "tier": "boss",
+      "name": "嗜虐的葬送龍騎士",
+      "hp": 2700,
+      "attack_damage": 11,
+      "attack_timer": 2,
+      "double_damage_chance": 0.25
+    }
+  ]
+}
