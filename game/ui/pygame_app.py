@@ -209,8 +209,39 @@ class MapScene:
         self.msg = ""
         self.show_equip_panel = False
         self._equip_item_rects: List[Tuple[str, pygame.Rect]] = []
+        self.scroll_y = 0
+        self.scroll_speed = 70
+        self._initial_scroll_done = False
         self._btn_equip = Button(pygame.Rect(0, 0, 160, 46), "裝備紋章")
         self._btn_training = Button(pygame.Rect(0, 0, 160, 46), "進入訓練場")
+
+    def _map_view_rect(self, sw: int, sh: int) -> pygame.Rect:
+        return pygame.Rect(30, 90, sw - 60, sh - 140)
+
+    def _map_content_height(self, view_rect: pygame.Rect) -> int:
+        g = self.run.map_graph
+        if not g.nodes:
+            return view_rect.h
+
+        max_depth = max(node.depth for node in g.nodes.values())
+        floor_count = max_depth + 1
+        return max(view_rect.h, floor_count * 105 + 240)
+
+    def _max_scroll_y(self, view_rect: pygame.Rect) -> int:
+        return max(0, self._map_content_height(view_rect) - view_rect.h)
+
+    def _clamp_scroll(self, view_rect: pygame.Rect) -> None:
+        self.scroll_y = max(0, min(self.scroll_y, self._max_scroll_y(view_rect)))
+
+    def _map_content_rect(self, sw: int, sh: int) -> pygame.Rect:
+        view_rect = self._map_view_rect(sw, sh)
+        self._clamp_scroll(view_rect)
+        return pygame.Rect(
+            view_rect.x,
+            view_rect.y - self.scroll_y,
+            view_rect.w,
+            self._map_content_height(view_rect),
+        )
 
     def _node_screen_pos(self, node: MapNode, rect: pygame.Rect) -> Tuple[int, int]:
         pad_x = 90
@@ -246,36 +277,48 @@ class MapScene:
     def clickable_nodes(self) -> List[int]:
         g = self.run.map_graph
         cur = g.nodes[self.run.current_node_id]
-
-        has_cleared_non_boss = any(
-            node.cleared and node.node_type.name != "BOSS"
-            for node in g.nodes.values()
-        )
-        if not has_cleared_non_boss and cur.depth == 0 and not cur.cleared:
-            return [nid for nid, node in g.nodes.items() if node.depth == 0]
-
         if not cur.cleared:
             return [cur.node_id]
         return list(cur.next_ids)
 
-    def _hovered_node(self, mouse_pos: Tuple[int, int], map_rect: pygame.Rect) -> Optional[int]:
+    def _hovered_node(self, mouse_pos: Tuple[int, int], content_rect: pygame.Rect, view_rect: pygame.Rect) -> Optional[int]:
+        if not view_rect.collidepoint(mouse_pos):
+            return None
+
         g = self.run.map_graph
         for nid, node in g.nodes.items():
-            x, y = self._node_screen_pos(node, map_rect)
+            x, y = self._node_screen_pos(node, content_rect)
+            if not view_rect.collidepoint((x, y)):
+                continue
             if (mouse_pos[0] - x) ** 2 + (mouse_pos[1] - y) ** 2 <= 18 ** 2:
                 return nid
         return None
 
-    def handle_map_click(self, pos: Tuple[int, int], map_rect: pygame.Rect) -> Optional[int]:
+    def handle_map_click(self, pos: Tuple[int, int], sw: int, sh: int) -> Optional[int]:
+        view_rect = self._map_view_rect(sw, sh)
+        if not view_rect.collidepoint(pos):
+            return None
+
+        content_rect = self._map_content_rect(sw, sh)
         g = self.run.map_graph
         clickables = set(self.clickable_nodes())
+
         for nid, node in g.nodes.items():
-            x, y = self._node_screen_pos(node, map_rect)
+            x, y = self._node_screen_pos(node, content_rect)
+            if not view_rect.collidepoint((x, y)):
+                continue
             if (pos[0] - x) ** 2 + (pos[1] - y) ** 2 <= 18 ** 2 and nid in clickables:
                 return nid
         return None
 
     def handle_event(self, event: pygame.event.Event, sw: int, sh: int) -> Optional[str]:
+        if event.type == pygame.MOUSEWHEEL:
+            view_rect = self._map_view_rect(sw, sh)
+            if not self.show_equip_panel and view_rect.collidepoint(pygame.mouse.get_pos()):
+                self.scroll_y -= event.y * self.scroll_speed
+                self._clamp_scroll(view_rect)
+            return None
+
         if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
             return None
         pos = event.pos
@@ -315,20 +358,31 @@ class MapScene:
         self._btn_equip.draw(screen, self.font, True)
         self._btn_training.draw(screen, self.font, True)
 
-        map_rect = pygame.Rect(30, 90, sw - 60, sh - 140)
+        view_rect = self._map_view_rect(sw, sh)
+        if not self._initial_scroll_done:
+            self.scroll_y = self._max_scroll_y(view_rect)
+            self._initial_scroll_done = True
+
+        content_rect = self._map_content_rect(sw, sh)
         g = self.run.map_graph
         clickables = set(self.clickable_nodes())
-        hovered = self._hovered_node(pygame.mouse.get_pos(), map_rect)
+        hovered = self._hovered_node(pygame.mouse.get_pos(), content_rect, view_rect)
+
+        pygame.draw.rect(screen, (255, 255, 255), view_rect, border_radius=18)
+        pygame.draw.rect(screen, (30, 30, 30), view_rect, width=2, border_radius=18)
+
+        old_clip = screen.get_clip()
+        screen.set_clip(view_rect)
 
         for node in g.nodes.values():
-            x1, y1 = self._node_screen_pos(node, map_rect)
+            x1, y1 = self._node_screen_pos(node, content_rect)
             for nid2 in node.next_ids:
                 n2 = g.nodes[nid2]
-                x2, y2 = self._node_screen_pos(n2, map_rect)
+                x2, y2 = self._node_screen_pos(n2, content_rect)
                 pygame.draw.line(screen, (160, 160, 160), (x1, y1), (x2, y2), 4)
 
         for node in g.nodes.values():
-            x, y = self._node_screen_pos(node, map_rect)
+            x, y = self._node_screen_pos(node, content_rect)
             if node.node_id in clickables:
                 _draw_glow(screen, (x, y), 36, (255, 230, 120), 80)
             if hovered == node.node_id:
@@ -358,8 +412,18 @@ class MapScene:
             if node.cleared:
                 _blit_text_outline(screen, self.font, "CLEAR!", (x, y + 46), center=True)
 
+        screen.set_clip(old_clip)
+
+        max_scroll = self._max_scroll_y(view_rect)
+        if max_scroll > 0:
+            track = pygame.Rect(view_rect.right - 14, view_rect.y + 18, 8, view_rect.h - 36)
+            pygame.draw.rect(screen, (210, 210, 210), track, border_radius=4)
+            thumb_h = max(36, int(track.h * view_rect.h / self._map_content_height(view_rect)))
+            thumb_y = track.y + int((track.h - thumb_h) * (self.scroll_y / max_scroll))
+            pygame.draw.rect(screen, (90, 90, 90), pygame.Rect(track.x, thumb_y, track.w, thumb_h), border_radius=4)
+
         cur = g.nodes[self.run.current_node_id]
-        hint = "點選目前節點" if not cur.cleared else "點選下一個節點"
+        hint = "滑鼠滾輪捲動地圖；點選目前節點" if not cur.cleared else "滑鼠滾輪捲動地圖；點選下一個節點"
         _blit_text_outline(screen, self.font, hint, (30, sh - 40))
         if self.msg:
             _blit_text_outline(screen, self.font, self.msg, (260, sh - 40), fg=(180, 30, 30))
@@ -756,36 +820,24 @@ def main() -> None:
                 if action == "training" and training_dummy is not None:
                     start_combat(training_dummy)
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not map_scene.show_equip_panel:
-                    map_rect = pygame.Rect(30, 90, sw - 60, sh - 140)
-                    nid = map_scene.handle_map_click(event.pos, map_rect)
+                    nid = map_scene.handle_map_click(event.pos, sw, sh)
                     if nid is None:
                         continue
                     run.current_node_id = nid
                     node = run.map_graph.nodes[nid]
-                    node_type_name = node.node_type.name
-                    if node_type_name == "CAMP":
+                    if node.node_type == NodeType.CAMP:
                         before = run.hp
                         run.hp = min(run.max_hp, run.hp + 20)
                         node.cleared = True
-                        map_scene.msg = f"休息點回復 {run.hp - before} HP"
-                    elif node_type_name == "TREASURE":
-                        reward = 50
-                        run.gold += reward
-                        node.cleared = True
-                        map_scene.msg = f"寶箱獲得 {reward} 金幣"
-                    elif node_type_name == "EVENT":
-                        reward = choice([15, 20, 25])
-                        run.gold += reward
-                        node.cleared = True
-                        map_scene.msg = f"事件完成，獲得 {reward} 金幣"
-                    elif node_type_name == "SHOP":
+                        map_scene.msg = f"CAMP 回復 {run.hp - before} HP"
+                    elif node.node_type == NodeType.SHOP:
                         shop_scene = ShopScene(run, sigils_all, font, font_big)
                         scene = "shop"
-                    elif node_type_name == "COMBAT" and normals:
+                    elif node.node_type == NodeType.COMBAT and normals:
                         start_combat(choice(normals))
-                    elif node_type_name == "ELITE" and elites:
+                    elif node.node_type == NodeType.ELITE and elites:
                         start_combat(choice(elites))
-                    elif node_type_name == "BOSS" and bosses:
+                    elif node.node_type == NodeType.BOSS and bosses:
                         start_combat(choice(bosses))
 
             elif scene == "shop":
