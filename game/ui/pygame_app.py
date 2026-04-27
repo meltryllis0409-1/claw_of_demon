@@ -220,14 +220,40 @@ class MapScene:
         return x, y
 
     def _label(self, t: NodeType) -> str:
-        return {NodeType.COMBAT: "戰鬥", NodeType.ELITE: "戰鬥-菁英", NodeType.CAMP: "帳篷", NodeType.SHOP: "商店", NodeType.BOSS: "BOSS戰"}[t]
+        labels = {
+            "COMBAT": "戰鬥",
+            "EVENT": "事件",
+            "ELITE": "戰鬥-菁英",
+            "CAMP": "休息點",
+            "SHOP": "商店",
+            "TREASURE": "寶箱",
+            "BOSS": "BOSS戰",
+        }
+        return labels.get(t.name, t.name)
 
     def _icon_name(self, t: NodeType) -> str:
-        return {NodeType.COMBAT: "combat.png", NodeType.ELITE: "elite.png", NodeType.CAMP: "camp.png", NodeType.SHOP: "shop.png", NodeType.BOSS: "boss.png"}[t]
+        icons = {
+            "COMBAT": "combat.png",
+            "EVENT": "event.png",
+            "ELITE": "elite.png",
+            "CAMP": "camp.png",
+            "SHOP": "shop.png",
+            "TREASURE": "treasure.png",
+            "BOSS": "boss.png",
+        }
+        return icons.get(t.name, "combat.png")
 
     def clickable_nodes(self) -> List[int]:
         g = self.run.map_graph
         cur = g.nodes[self.run.current_node_id]
+
+        has_cleared_non_boss = any(
+            node.cleared and node.node_type.name != "BOSS"
+            for node in g.nodes.values()
+        )
+        if not has_cleared_non_boss and cur.depth == 0 and not cur.cleared:
+            return [nid for nid, node in g.nodes.items() if node.depth == 0]
+
         if not cur.cleared:
             return [cur.node_id]
         return list(cur.next_ids)
@@ -315,7 +341,16 @@ class MapScene:
                     icon.set_alpha(160)
                 screen.blit(icon, icon.get_rect(center=(x, y)))
             else:
-                pygame.draw.circle(screen, (90, 120, 200), (x, y), 18)
+                fallback_colors = {
+                    "COMBAT": (90, 120, 200),
+                    "EVENT": (150, 90, 190),
+                    "ELITE": (190, 80, 70),
+                    "CAMP": (80, 160, 100),
+                    "SHOP": (210, 160, 60),
+                    "TREASURE": (220, 185, 60),
+                    "BOSS": (90, 40, 40),
+                }
+                pygame.draw.circle(screen, fallback_colors.get(node.node_type.name, (90, 120, 200)), (x, y), 18)
                 pygame.draw.circle(screen, (30, 30, 30), (x, y), 18, 2)
 
             if hovered == node.node_id:
@@ -727,19 +762,30 @@ def main() -> None:
                         continue
                     run.current_node_id = nid
                     node = run.map_graph.nodes[nid]
-                    if node.node_type == NodeType.CAMP:
+                    node_type_name = node.node_type.name
+                    if node_type_name == "CAMP":
                         before = run.hp
                         run.hp = min(run.max_hp, run.hp + 20)
                         node.cleared = True
-                        map_scene.msg = f"CAMP 回復 {run.hp - before} HP"
-                    elif node.node_type == NodeType.SHOP:
+                        map_scene.msg = f"休息點回復 {run.hp - before} HP"
+                    elif node_type_name == "TREASURE":
+                        reward = 50
+                        run.gold += reward
+                        node.cleared = True
+                        map_scene.msg = f"寶箱獲得 {reward} 金幣"
+                    elif node_type_name == "EVENT":
+                        reward = choice([15, 20, 25])
+                        run.gold += reward
+                        node.cleared = True
+                        map_scene.msg = f"事件完成，獲得 {reward} 金幣"
+                    elif node_type_name == "SHOP":
                         shop_scene = ShopScene(run, sigils_all, font, font_big)
                         scene = "shop"
-                    elif node.node_type == NodeType.COMBAT and normals:
+                    elif node_type_name == "COMBAT" and normals:
                         start_combat(choice(normals))
-                    elif node.node_type == NodeType.ELITE and elites:
+                    elif node_type_name == "ELITE" and elites:
                         start_combat(choice(elites))
-                    elif node.node_type == NodeType.BOSS and bosses:
+                    elif node_type_name == "BOSS" and bosses:
                         start_combat(choice(bosses))
 
             elif scene == "shop":
