@@ -7,8 +7,9 @@ from typing import Dict, List, Optional, Set, Tuple
 
 
 class NodeType(Enum):
+    START = auto()
     COMBAT = auto()
-    EVENT = auto()
+    UNKNOWN = auto()
     ELITE = auto()
     CAMP = auto()
     SHOP = auto()
@@ -46,7 +47,7 @@ MAX_PATH_ATTEMPTS = 80
 
 LOCATION_WEIGHTS: List[Tuple[NodeType, int]] = [
     (NodeType.COMBAT, 45),
-    (NodeType.EVENT, 22),
+    (NodeType.UNKNOWN, 22),
     (NodeType.ELITE, 16),
     (NodeType.CAMP, 12),
     (NodeType.SHOP, 5),
@@ -234,7 +235,7 @@ def _base_floor_allowed(pos: Position, node_type: NodeType) -> bool:
     if fixed is not None:
         return node_type == fixed
 
-    if node_type == NodeType.TREASURE or node_type == NodeType.BOSS:
+    if node_type in (NodeType.START, NodeType.TREASURE, NodeType.BOSS):
         return False
 
     if floor < 5 and node_type in (NodeType.ELITE, NodeType.CAMP):
@@ -425,9 +426,9 @@ def _node_x(col: int) -> float:
 
 def _node_y(floor: int) -> float:
     if GRID_FLOORS <= 1:
-        return 1.0
+        return 0.5
 
-    return 1.0 - floor / (GRID_FLOORS - 1)
+    return 1.0 - ((floor + 1) / (GRID_FLOORS + 1))
 
 
 def _build_map_graph(
@@ -460,7 +461,7 @@ def _build_map_graph(
         depth=GRID_FLOORS,
         idx=GRID_COLS // 2,
         x=0.5,
-        y=-0.10,
+        y=0.0,
         node_type=NodeType.BOSS,
         next_ids=[],
     )
@@ -486,7 +487,17 @@ def _build_map_graph(
         key=lambda p: p[1],
     )
 
-    start_id = pos_to_id[first_floor_positions[0]]
+    start_id = len(nodes)
+
+    nodes[start_id] = MapNode(
+        node_id=start_id,
+        depth=-1,
+        idx=GRID_COLS // 2,
+        x=0.5,
+        y=1.0,
+        node_type=NodeType.START,
+        next_ids=[pos_to_id[pos] for pos in first_floor_positions],
+    )
 
     return MapGraph(
         nodes=nodes,

@@ -1,0 +1,418 @@
+{
+    "events": [
+        {
+            "id": "demon_altar",
+            "title": "\u60e1\u9b54\u796d\u58c7",
+            "description": "\u4e00\u5ea7\u7531\u9ed1\u9aa8\u5806\u6210\u7684\u796d\u58c7\u7acb\u5728\u623f\u9593\u4e2d\u592e\uff0c\u4e7e\u6db8\u7684\u8840\u8de1\u6cbf\u8457\u88c2\u7e2b\u5411\u4e0b\u5ef6\u4f38\u3002\u796d\u58c7\u6c92\u6709\u8072\u97f3\uff0c\u537b\u50cf\u662f\u5728\u7b49\u5f85\u4f60\u7684\u9078\u64c7\u3002",
+            "min_floor": 1,
+            "max_floor": 99,
+            "options": [
+                {
+                    "label": "\u737b\u4e0a\u9bae\u8840",
+                    "text": "\u5931\u53bb 10 HP\uff0c\u5f9e 3 \u500b\u96a8\u6a5f\u7d0b\u7ae0\u4e2d\u9078\u64c7 1 \u500b\u3002",
+                    "requires": [
+                        {
+                            "type": "hp_more_than",
+                            "amount": 10
+                        }
+                    ],
+                    "effects": [
+                        {
+                            "type": "lose_hp",
+                            "amount": 10
+                        },
+                        {
+                            "type": "choose_random_sigil",
+                            "amount": 3,
+                            "pick": 1
+                        }
+                    ]
+                },
+                {
+                    "label": "\u64f4\u5f35\u722a\u75d5",
+                    "text": "\u5931\u53bb 20 HP\uff0c\u89e3\u9396 1 \u500b\u7d0b\u7ae0\u63d2\u69fd\u3002",
+                    "requires": [
+                        {
+                            "type": "hp_more_than",
+                            "amount": 20
+                        }
+                    ],
+                    "effects": [
+                        {
+                            "type": "lose_hp",
+                            "amount": 20
+                        },
+                        {
+                            "type": "gain_sigil_slot",
+                            "amount": 1
+                        }
+                    ]
+                },
+                {
+                    "label": "\u96e2\u958b",
+                    "text": "\u4f60\u58d3\u4e0b\u5fc3\u4e2d\u7684\u6e34\u671b\uff0c\u8f49\u8eab\u96e2\u958b\u3002",
+                    "effects": [
+                        {
+                            "type": "nothing",
+                            "message": "\u4f60\u96e2\u958b\u4e86\u796d\u58c7\u3002"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "gambler_bone_table",
+            "title": "\u8ced\u5f92\u7684\u9aa8\u724c\u684c",
+            "description": "\u4e00\u5f35\u7834\u820a\u8ced\u684c\u64fa\u5728\u623f\u9593\u6df1\u8655\u3002\u684c\u4e0a\u6563\u843d\u8457\u9aa8\u724c\u3001\u7c4c\u78bc\u8207\u4e7e\u6389\u7684\u8840\u8de1\uff0c\u67d0\u500b\u770b\u4e0d\u898b\u7684\u838a\u5bb6\u6b63\u5728\u7b49\u4f60\u4e0b\u6ce8\u3002",
+            "min_floor": 1,
+            "max_floor": 99,
+            "options": [
+                {
+                    "label": "\u5c0f\u8ced\u4e00\u628a",
+                    "text": "\u652f\u4ed8 20 \u91d1\u5e63\uff1a50% \u7372\u5f97 60 \u91d1\u5e63\uff0c50% \u5931\u53bb 10 HP\u3002",
+                    "requires": [
+                        {
+                            "type": "min_gold",
+                            "amount": 20
+                        }
+                    ],
+                    "effects": [
+                        {
+                            "type": "lose_gold",
+                            "amount": 20
+                        },
+                        {
+                            "type": "random_choice",
+                            "choices": [
+                                {
+                                    "weight": 50,
+                                    "message": "\u9aa8\u724c\u505c\u5728\u52dd\u5229\u7684\u4e00\u9762\u3002",
+                                    "effects": [
+                                        {
+                                            "type": "gain_gold",
+                                            "amount": 60
+                                        }
+                                    ]
+                                },
+                                {
+                                    "weight": 50,
+                                    "message": "\u9aa8\u724c\u88c2\u958b\uff0c\u9ed1\u7159\u947d\u5165\u4f60\u7684\u50b7\u53e3\u3002",
+                                    "effects": [
+                                        {
+                                            "type": "lose_hp",
+                                            "amount": 10
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "label": "\u8c6a\u8ced\u7d0b\u7ae0",
+                    "text": "\u652f\u4ed8 40 \u91d1\u5e63\uff0c\u7372\u5f97 1 \u500b\u96a8\u6a5f\u7d0b\u7ae0\uff0c\u4f46 30% \u984d\u5916\u5931\u53bb 15 HP\u3002",
+                    "requires": [
+                        {
+                            "type": "min_gold",
+                            "amount": 40
+                        }
+                    ],
+                    "effects": [
+                        {
+                            "type": "lose_gold",
+                            "amount": 40
+                        },
+                        {
+                            "type": "gain_random_sigil",
+                            "amount": 1
+                        },
+                        {
+                            "type": "random_choice",
+                            "choices": [
+                                {
+                                    "weight": 30,
+                                    "message": "\u838a\u5bb6\u6536\u4e0b\u4e86\u984d\u5916\u4ee3\u50f9\u3002",
+                                    "effects": [
+                                        {
+                                            "type": "lose_hp",
+                                            "amount": 15
+                                        }
+                                    ]
+                                },
+                                {
+                                    "weight": 70,
+                                    "message": "\u4f60\u5b89\u5168\u96e2\u958b\u4e86\u8ced\u684c\u3002",
+                                    "effects": []
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "label": "\u96e2\u958b",
+                    "text": "\u4f60\u4e0d\u78b0\u90a3\u4e9b\u7c4c\u78bc\u3002",
+                    "effects": [
+                        {
+                            "type": "nothing",
+                            "message": "\u4f60\u96e2\u958b\u4e86\u8ced\u684c\u3002"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "locked_black_box",
+            "title": "\u4e0a\u9396\u7684\u9ed1\u7bb1",
+            "description": "\u4e00\u53ea\u6c89\u91cd\u7684\u9ed1\u7bb1\u88ab\u9396\u93c8\u7d81\u5728\u5730\u4e0a\u3002\u7bb1\u7e2b\u4e2d\u6ef2\u51fa\u6de1\u6de1\u91d1\u5149\uff0c\u4e5f\u50b3\u4f86\u67d0\u7a2e\u6771\u897f\u522e\u52d5\u7bb1\u58c1\u7684\u8072\u97f3\u3002",
+            "min_floor": 1,
+            "max_floor": 99,
+            "options": [
+                {
+                    "label": "\u5f37\u884c\u6253\u958b",
+                    "text": "\u7372\u5f97 80 \u91d1\u5e63\uff0c\u4f46\u5931\u53bb 15 HP\u3002",
+                    "requires": [
+                        {
+                            "type": "hp_more_than",
+                            "amount": 15
+                        }
+                    ],
+                    "effects": [
+                        {
+                            "type": "gain_gold",
+                            "amount": 80
+                        },
+                        {
+                            "type": "lose_hp",
+                            "amount": 15
+                        }
+                    ]
+                },
+                {
+                    "label": "\u5c0f\u5fc3\u6253\u958b",
+                    "text": "\u7372\u5f97 30 \u91d1\u5e63\u3002",
+                    "effects": [
+                        {
+                            "type": "gain_gold",
+                            "amount": 30
+                        }
+                    ]
+                },
+                {
+                    "label": "\u6253\u958b\u5f8c\u8fce\u6230",
+                    "text": "\u7372\u5f97 1 \u500b\u96a8\u6a5f\u7d0b\u7ae0\uff0c\u7136\u5f8c\u9032\u5165\u666e\u901a\u6230\u3002",
+                    "effects": [
+                        {
+                            "type": "gain_random_sigil",
+                            "amount": 1
+                        },
+                        {
+                            "type": "start_normal_combat"
+                        }
+                    ]
+                },
+                {
+                    "label": "\u96e2\u958b",
+                    "text": "\u4f60\u8b93\u9ed1\u7bb1\u7e7c\u7e8c\u6c89\u7761\u3002",
+                    "effects": [
+                        {
+                            "type": "nothing",
+                            "message": "\u4f60\u6c92\u6709\u6253\u958b\u9ed1\u7bb1\u3002"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "wandering_sigil_monger",
+            "title": "\u6d41\u6d6a\u7d0b\u7ae0\u5546",
+            "description": "\u4e00\u540d\u62ab\u8457\u7834\u6597\u7bf7\u7684\u5546\u4eba\u5750\u5728\u89d2\u843d\uff0c\u6524\u5e03\u4e0a\u64fa\u8457\u5e7e\u679a\u4ecd\u5728\u5fae\u5fae\u8df3\u52d5\u7684\u7d0b\u7ae0\u3002\u4ed6\u770b\u8d77\u4f86\u4e0d\u50cf\u6d3b\u4eba\uff0c\u4e5f\u4e0d\u50cf\u6b7b\u4eba\u3002",
+            "min_floor": 1,
+            "max_floor": 99,
+            "options": [
+                {
+                    "label": "\u8cfc\u8cb7\u6b98\u5370",
+                    "text": "\u652f\u4ed8 35 \u91d1\u5e63\uff0c\u7372\u5f97 1 \u500b\u96a8\u6a5f\u7d0b\u7ae0\u3002",
+                    "requires": [
+                        {
+                            "type": "min_gold",
+                            "amount": 35
+                        }
+                    ],
+                    "effects": [
+                        {
+                            "type": "lose_gold",
+                            "amount": 35
+                        },
+                        {
+                            "type": "gain_random_sigil",
+                            "amount": 1
+                        }
+                    ]
+                },
+                {
+                    "label": "\u6311\u9078\u771f\u5370",
+                    "text": "\u652f\u4ed8 70 \u91d1\u5e63\uff0c\u5f9e 3 \u500b\u96a8\u6a5f\u7d0b\u7ae0\u4e2d\u9078\u64c7 1 \u500b\u3002",
+                    "requires": [
+                        {
+                            "type": "min_gold",
+                            "amount": 70
+                        }
+                    ],
+                    "effects": [
+                        {
+                            "type": "lose_gold",
+                            "amount": 70
+                        },
+                        {
+                            "type": "choose_random_sigil",
+                            "amount": 3,
+                            "pick": 1
+                        }
+                    ]
+                },
+                {
+                    "label": "\u6436\u596a\u5546\u4eba",
+                    "text": "\u7372\u5f97 50 \u91d1\u5e63\uff0c\u4f46\u7acb\u523b\u9032\u5165\u83c1\u82f1\u6230\u3002",
+                    "effects": [
+                        {
+                            "type": "gain_gold",
+                            "amount": 50
+                        },
+                        {
+                            "type": "start_elite_combat"
+                        }
+                    ]
+                },
+                {
+                    "label": "\u96e2\u958b",
+                    "text": "\u4f60\u6c92\u6709\u8207\u4ed6\u4ea4\u6613\u3002",
+                    "effects": [
+                        {
+                            "type": "nothing",
+                            "message": "\u5546\u4eba\u4f4e\u8072\u7b11\u4e86\u4e00\u4e0b\u3002"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "dry_holy_spring",
+            "title": "\u4e7e\u6db8\u8056\u6cc9",
+            "description": "\u4e00\u5ea7\u7834\u788e\u7684\u77f3\u6cc9\u53ea\u5269\u5c11\u91cf\u9ed1\u6c34\u3002\u6cc9\u908a\u523b\u8457\u7948\u79b1\u6587\uff0c\u4f46\u5b57\u8de1\u50cf\u662f\u88ab\u722a\u5b50\u4e00\u7b46\u4e00\u7b46\u522e\u721b\u3002",
+            "min_floor": 1,
+            "max_floor": 99,
+            "options": [
+                {
+                    "label": "\u6295\u5e63\u7948\u79b1",
+                    "text": "\u652f\u4ed8 30 \u91d1\u5e63\uff0c\u56de\u5fa9 20 HP\u3002",
+                    "requires": [
+                        {
+                            "type": "min_gold",
+                            "amount": 30
+                        }
+                    ],
+                    "effects": [
+                        {
+                            "type": "lose_gold",
+                            "amount": 30
+                        },
+                        {
+                            "type": "gain_hp",
+                            "amount": 20
+                        }
+                    ]
+                },
+                {
+                    "label": "\u98f2\u4e0b\u9ed1\u6c34",
+                    "text": "\u56de\u5fa9 50 HP\uff0c\u4f46\u6700\u5927\u751f\u547d\u503c -8\u3002",
+                    "requires": [
+                        {
+                            "type": "max_hp_more_than",
+                            "amount": 9
+                        }
+                    ],
+                    "effects": [
+                        {
+                            "type": "gain_hp",
+                            "amount": 50
+                        },
+                        {
+                            "type": "lose_max_hp",
+                            "amount": 8
+                        }
+                    ]
+                },
+                {
+                    "label": "\u96e2\u958b",
+                    "text": "\u4f60\u6c92\u6709\u78b0\u90a3\u6524\u9ed1\u6c34\u3002",
+                    "effects": [
+                        {
+                            "type": "nothing",
+                            "message": "\u4f60\u96e2\u958b\u4e86\u4e7e\u6db8\u8056\u6cc9\u3002"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "claw_contract",
+            "title": "\u722a\u4e4b\u5951\u7d04",
+            "description": "\u7246\u4e0a\u6d6e\u73fe\u4e00\u884c\u9bae\u7d05\u5951\u7d04\u3002\u6587\u5b57\u4e0d\u65b7\u8b8a\u5f62\uff0c\u6700\u5f8c\u5316\u6210\u4f60\u7684\u540d\u5b57\u3002\u5b83\u5141\u8afe\u529b\u91cf\uff0c\u4e5f\u7d22\u53d6\u4ee3\u50f9\u3002",
+            "min_floor": 1,
+            "max_floor": 99,
+            "options": [
+                {
+                    "label": "\u7c3d\u4e0b\u91d1\u5951",
+                    "text": "\u7372\u5f97 100 \u91d1\u5e63\uff0c\u4f46\u6700\u5927\u751f\u547d\u503c -10\u3002",
+                    "requires": [
+                        {
+                            "type": "max_hp_more_than",
+                            "amount": 11
+                        }
+                    ],
+                    "effects": [
+                        {
+                            "type": "gain_gold",
+                            "amount": 100
+                        },
+                        {
+                            "type": "lose_max_hp",
+                            "amount": 10
+                        }
+                    ]
+                },
+                {
+                    "label": "\u7c3d\u4e0b\u8840\u5951",
+                    "text": "\u5931\u53bb 25 HP\uff0c\u5f9e 3 \u500b\u96a8\u6a5f\u7d0b\u7ae0\u4e2d\u9078\u64c7 1 \u500b\u3002",
+                    "requires": [
+                        {
+                            "type": "hp_more_than",
+                            "amount": 25
+                        }
+                    ],
+                    "effects": [
+                        {
+                            "type": "lose_hp",
+                            "amount": 25
+                        },
+                        {
+                            "type": "choose_random_sigil",
+                            "amount": 3,
+                            "pick": 1
+                        }
+                    ]
+                },
+                {
+                    "label": "\u6495\u6bc0\u5951\u7d04",
+                    "text": "\u4f60\u62d2\u7d55\u7c3d\u540d\u3002",
+                    "effects": [
+                        {
+                            "type": "nothing",
+                            "message": "\u5951\u7d04\u5728\u7246\u4e0a\u71c3\u6210\u7070\u3002"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

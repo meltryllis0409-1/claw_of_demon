@@ -1,0 +1,106 @@
+{
+  "start_events": [
+    {
+      "id": "starting_gold",
+      "label": "收下金幣",
+      "text": "獲得 40 金幣。",
+      "effects": [
+        {
+          "type": "gain_gold",
+          "amount": 40
+        }
+      ]
+    },
+    {
+      "id": "starting_sigil",
+      "label": "接受紋章",
+      "text": "獲得 1 個隨機紋章。",
+      "effects": [
+        {
+          "type": "gain_random_sigil",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "starting_slot",
+      "label": "擴張爪痕",
+      "text": "解鎖 1 個紋章插槽。",
+      "effects": [
+        {
+          "type": "gain_sigil_slot",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "id": "starting_max_hp",
+      "label": "強化肉身",
+      "text": "最大生命值 +40，並回復 40 HP。",
+      "effects": [
+        {
+          "type": "gain_max_hp",
+          "amount": 40
+        }
+      ]
+    },
+    {
+      "id": "blood_money",
+      "label": "血金契約",
+      "text": "獲得 90 金幣，但最大生命值 -10。",
+      "effects": [
+        {
+          "type": "gain_gold",
+          "amount": 90
+        },
+        {
+          "type": "lose_max_hp",
+          "amount": 10
+        }
+      ]
+    },
+    {
+      "id": "hunt_blessing",
+      "label": "狩獵祝福",
+      "text": "接下來 2 場普通戰中，敵人生命值 -30%。",
+      "effects": [
+        {
+          "type": "early_enemy_hp_down",
+          "amount": 2,
+          "ratio": 0.3
+        }
+      ]
+    },
+    {
+      "id": "scar_sigil",
+      "label": "鮮血祭禮",
+      "text": "失去 8 HP，然後從 3 個隨機紋章中選擇 1 個。",
+      "effects": [
+        {
+          "type": "lose_hp",
+          "amount": 8
+        },
+        {
+          "type": "choose_random_sigil",
+          "amount": 3,
+          "pick": 1
+        }
+      ]
+    },
+    {
+      "id": "small_preparation",
+      "label": "整備行囊",
+      "text": "獲得 25 金幣，並回復 5 HP。",
+      "effects": [
+        {
+          "type": "gain_gold",
+          "amount": 25
+        },
+        {
+          "type": "gain_hp",
+          "amount": 5
+        }
+      ]
+    }
+  ]
+}

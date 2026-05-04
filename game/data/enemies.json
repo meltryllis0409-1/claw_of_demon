@@ -69,6 +69,173 @@
       "attack_damage": 11,
       "attack_timer": 2,
       "double_damage_chance": 0.25
+    },
+    {
+      "id": "wasteland_ratrobber",
+      "tier": "normal",
+      "name": "荒原盜鼠",
+      "hp": 260,
+      "attack_damage": 2,
+      "attack_timer": 1
+    },
+    {
+      "id": "bone_spike_hound",
+      "tier": "normal",
+      "name": "骨刺犬",
+      "hp": 320,
+      "attack_damage": 3,
+      "attack_timer": 2
+    },
+    {
+      "id": "sand_shell_beetle",
+      "tier": "normal",
+      "name": "砂殼甲蟲",
+      "hp": 620,
+      "attack_damage": 2,
+      "attack_timer": 3
+    },
+    {
+      "id": "mire_walker",
+      "tier": "normal",
+      "name": "腐泥行者",
+      "hp": 380,
+      "attack_damage": 2,
+      "attack_timer": 2,
+      "heal_on_attack": 8
+    },
+    {
+      "id": "broken_horn_ram",
+      "tier": "normal",
+      "name": "斷角羊",
+      "hp": 420,
+      "attack_damage": 7,
+      "attack_timer": 4
+    },
+    {
+      "id": "rust_sword_deadman",
+      "tier": "normal",
+      "name": "鏽劍亡兵",
+      "hp": 460,
+      "attack_damage": 4,
+      "attack_timer": 3
+    },
+    {
+      "id": "red_eyed_bat",
+      "tier": "normal",
+      "name": "紅眼蝙蝠",
+      "hp": 220,
+      "attack_damage": 2,
+      "attack_timer": 1
+    },
+    {
+      "id": "graveyard_gambler",
+      "tier": "normal",
+      "name": "墓地賭徒",
+      "hp": 360,
+      "attack_damage": 3,
+      "attack_timer": 2,
+      "double_damage_chance": 0.15
+    },
+    {
+      "id": "black_claw_hatchling",
+      "tier": "normal",
+      "name": "黑爪幼體",
+      "hp": 340,
+      "attack_damage": 2,
+      "attack_timer": 2,
+      "frenzy_hp_threshold": 100,
+      "frenzy_attacks": 2
+    },
+    {
+      "id": "shattered_shield_soldier",
+      "tier": "normal",
+      "name": "碎盾兵",
+      "hp": 700,
+      "attack_damage": 3,
+      "attack_timer": 3
+    },
+    {
+      "id": "ash_scavenger",
+      "tier": "normal",
+      "name": "灰燼拾荒者",
+      "hp": 300,
+      "attack_damage": 2,
+      "attack_timer": 2
+    },
+    {
+      "id": "patterned_viper",
+      "tier": "normal",
+      "name": "花紋毒蛇",
+      "hp": 280,
+      "attack_damage": 4,
+      "attack_timer": 2
+    },
+    {
+      "id": "elite_bloodtooth_priest",
+      "tier": "elite",
+      "name": "血齒祭司",
+      "hp": 720,
+      "attack_damage": 4,
+      "attack_timer": 2,
+      "heal_on_attack": 25
+    },
+    {
+      "id": "elite_severed_arm_duelist",
+      "tier": "elite",
+      "name": "斷腕決鬥者",
+      "hp": 650,
+      "attack_damage": 5,
+      "attack_timer": 2,
+      "frenzy_hp_threshold": 220,
+      "frenzy_attacks": 2
+    },
+    {
+      "id": "elite_fourfold_judge",
+      "tier": "elite",
+      "name": "四相裁決者",
+      "hp": 680,
+      "attack_damage": 4,
+      "attack_timer": 2,
+      "disable_suit_on_attack": true,
+      "disable_suit_turns": 1
+    },
+    {
+      "id": "elite_dice_executioner",
+      "tier": "elite",
+      "name": "骰骨處刑人",
+      "hp": 620,
+      "attack_damage": 5,
+      "attack_timer": 2,
+      "double_damage_chance": 0.3
+    },
+    {
+      "id": "elite_iron_coffin_beast",
+      "tier": "elite",
+      "name": "鐵棺巨獸",
+      "hp": 900,
+      "attack_damage": 12,
+      "attack_timer": 4
+    },
+    {
+      "id": "elite_night_patrol_headhunter",
+      "tier": "elite",
+      "name": "夜巡獵首者",
+      "hp": 580,
+      "attack_damage": 3,
+      "attack_timer": 1,
+      "frenzy_hp_threshold": 180,
+      "frenzy_attacks": 2
+    },
+    {
+      "id": "venom_claw_matriarch",
+      "tier": "boss",
+      "name": "瘴爪女王",
+      "hp": 2350,
+      "attack_damage": 6,
+      "attack_timer": 3,
+      "poison_on_attack": true,
+      "poison_stacks_on_attack": 1,
+      "poison_damage_per_stack": 2
     }
   ]
 }
