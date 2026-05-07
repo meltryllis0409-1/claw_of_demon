@@ -78,6 +78,10 @@ class CombatState:
     gold: int = 0
     player_shield: int = 0
     player_block: int = 0
+    enemy_shield: int = 0
+    enemy_block: int = 0
+    enemy_double_next_attack: bool = False
+    enemy_skip_next_attack: bool = False
 
     deck: Deck = field(default_factory=Deck)
     hand: List[Card] = field(default_factory=list)
@@ -108,6 +112,13 @@ class CombatState:
     next_enemy_flat_damage_reduction: int = 0
     four_corner_cage_triggers: int = 0
 
+    potion_damage_bonus_percent: int = 0
+    potion_gold_bonus_percent: int = 0
+    potion_damage_taken_bonus_percent: int = 0
+    potion_damage_taken_reduction_percent: int = 0
+    potion_regen_turns_left: int = 0
+    potion_regen_amount: int = 10
+
     def start(self, enemy: Enemy) -> None:
         self.enemy = enemy
         self.enemy.hp = self.enemy.max_hp
@@ -133,11 +144,26 @@ class CombatState:
         self.next_enemy_damage_reduction_percent = 0
         self.next_enemy_flat_damage_reduction = 0
         self.four_corner_cage_triggers = 0
+        self.potion_damage_bonus_percent = 0
+        self.potion_gold_bonus_percent = 0
+        self.potion_damage_taken_bonus_percent = 0
+        self.potion_damage_taken_reduction_percent = 0
+        self.potion_regen_turns_left = 0
+        self.potion_regen_amount = 10
         self.log = [f"遭遇敵人: {enemy.name}"]
         self.damage_events = []
         self.enemy_turn_pending = False
         self.player_shield = 0
         self.player_block = 0
+        self.enemy_shield = 0
+        self.enemy_block = 0
+        self.enemy_double_next_attack = False
+        self.enemy_skip_next_attack = False
+
+        starting_shield = max(0, int(getattr(enemy, "starting_shield", 0) or 0))
+        if starting_shield > 0:
+            self.enemy_shield = starting_shield
+            self.log.append(f"{enemy.name} 帶有 {starting_shield} 點護盾。")
 
     def refresh_sigil_state(self) -> None:
         self._refill_hand_to_8()
@@ -244,6 +270,21 @@ class CombatState:
             if healed > 0:
                 self.log.append(f"堅毅回復 {healed} 點生命值。")
 
+        if self.potion_regen_turns_left > 0:
+            before = self.player_hp
+            self.player_hp = min(self.player_max_hp, self.player_hp + max(0, int(self.potion_regen_amount)))
+            healed = self.player_hp - before
+            self.potion_regen_turns_left = max(0, self.potion_regen_turns_left - 1)
+            if healed > 0:
+                self.log.append(f"再生劑回復 {healed} 點生命值。剩餘 {self.potion_regen_turns_left} 回合。")
+            else:
+                self.log.append(f"再生劑效果經過 1 回合。剩餘 {self.potion_regen_turns_left} 回合。")
+
+        if self.enemy is not None:
+            enemy_block_per_turn = max(0, int(getattr(self.enemy, "block_per_turn", 0) or 0))
+            if enemy_block_per_turn > 0:
+                self._enemy_gain_block(enemy_block_per_turn)
+
         self._purge_disabled_from_hand()
 
     def _disable_random_suit(self) -> None:
@@ -331,6 +372,88 @@ class CombatState:
 
         return dmg
 
+    def _enemy_gain_shield(self, amount: int) -> int:
+        gained = max(0, int(amount))
+        if gained <= 0:
+            return 0
+        self.enemy_shield += gained
+        if self.enemy is not None:
+            self.log.append(f"{self.enemy.name} 獲得 {gained} 點護盾。")
+        return gained
+
+    def _enemy_gain_block(self, amount: int) -> int:
+        gained = max(0, int(amount))
+        if gained <= 0:
+            return 0
+        self.enemy_block += gained
+        if self.enemy is not None:
+            self.log.append(f"{self.enemy.name} 獲得 {gained} 點格擋。")
+        return gained
+
+    def _clear_enemy_block(self) -> None:
+        if self.enemy_block > 0:
+            lost = self.enemy_block
+            self.enemy_block = 0
+            if self.enemy is not None:
+                self.log.append(f"回合結束，{self.enemy.name} 的 {lost} 點格擋消失。")
+
+    def _apply_enemy_block_and_shield(self, dmg: int) -> int:
+        dmg = max(0, int(dmg))
+        if dmg <= 0:
+            return 0
+
+        if self.enemy_block > 0:
+            used = min(self.enemy_block, dmg)
+            self.enemy_block -= used
+            dmg -= used
+            if self.enemy is not None:
+                self.log.append(f"{self.enemy.name} 的格擋抵銷 {used} 點傷害。")
+
+        if dmg > 0 and self.enemy_shield > 0:
+            used = min(self.enemy_shield, dmg)
+            self.enemy_shield -= used
+            dmg -= used
+            if self.enemy is not None:
+                self.log.append(f"{self.enemy.name} 的護盾抵銷 {used} 點傷害。")
+
+        return dmg
+
+    def _deal_damage_to_enemy(self, raw_damage: int, damage_type: str = "physical", source: str = "player_attack") -> int:
+        if self.enemy is None:
+            return 0
+        dmg = max(0, int(raw_damage))
+        dmg = self._apply_enemy_block_and_shield(dmg)
+        before = self.enemy.hp
+        self.enemy.hp = max(0, self.enemy.hp - dmg)
+        actual = before - self.enemy.hp
+        self._record_damage_event("enemy", actual, damage_type, source)
+        return actual
+
+    def _arbiter_player_turn_damage_percent(self, turn_damage: int) -> int:
+        if self.enemy is None:
+            return 100
+
+        threshold = int(getattr(self.enemy, "arbiter_damage_threshold", 0) or 0)
+        if threshold <= 0:
+            return 100
+
+        turn_damage = max(0, int(turn_damage))
+        if turn_damage < threshold:
+            reduction_percent = max(0, min(95, int(getattr(self.enemy, "arbiter_damage_reduction_percent", 50) or 50)))
+            damage_percent = max(0, 100 - reduction_percent)
+            attacks = max(1, int(getattr(self.enemy, "arbiter_low_damage_attacks", 2) or 2))
+            self.enemy_double_next_attack = attacks >= 2
+            self.enemy_skip_next_attack = False
+            reduced_total = max(0, int(round(turn_damage * damage_percent / 100.0)))
+            self.log.append(f"仲裁者判定：本回合傷害低於 {threshold}，總傷害 {turn_damage} → {reduced_total}，下一次攻擊變為 {attacks} 連擊。")
+            return damage_percent
+
+        if bool(getattr(self.enemy, "arbiter_high_damage_skip_attack", False)):
+            self.enemy_skip_next_attack = True
+            self.enemy_double_next_attack = False
+            self.log.append(f"仲裁者判定：本回合傷害達到 {threshold}，下一次攻擊被取消。")
+        return 100
+
     def _apply_played_card_poison(self, played_count: int) -> None:
         if played_count <= 0 or self.player_poison_stacks <= 0:
             return
@@ -346,6 +469,41 @@ class CombatState:
         self.log.append(f"毒素侵蝕：你打出 {played_count} 張牌，受到 {actual} 點傷害。")
         if self.player_hp <= 0:
             self.log.append("戰敗!")
+
+    def _apply_potion_player_damage_bonus(self, dmg: int) -> int:
+        dmg = max(0, int(dmg))
+        percent = max(0, int(self.potion_damage_bonus_percent))
+        if dmg <= 0 or percent <= 0:
+            return dmg
+        before = dmg
+        dmg = max(1, int(round(dmg * (100 + percent) / 100.0)))
+        bonus = dmg - before
+        if bonus > 0:
+            self.log.append(f"憤怒藥劑追加 {bonus} 點傷害。")
+        return dmg
+
+    def _apply_potion_incoming_damage_modifiers(self, dmg: int) -> int:
+        dmg = max(0, int(dmg))
+        if dmg <= 0:
+            return 0
+
+        bonus_percent = max(0, int(self.potion_damage_taken_bonus_percent))
+        if bonus_percent > 0:
+            before = dmg
+            dmg = max(1, int(round(dmg * (100 + bonus_percent) / 100.0)))
+            increased = dmg - before
+            if increased > 0:
+                self.log.append(f"貪婪藥水副作用：受到傷害 +{increased}。")
+
+        reduction_percent = max(0, min(95, int(self.potion_damage_taken_reduction_percent)))
+        if reduction_percent > 0 and dmg > 0:
+            before = dmg
+            dmg = max(0, int(round(dmg * (100 - reduction_percent) / 100.0)))
+            reduced = before - dmg
+            if reduced > 0:
+                self.log.append(f"抗擊藥劑減少 {reduced} 點傷害。")
+
+        return dmg
 
     def _apply_enemy_damage_reduction(self, dmg: int) -> int:
         max_reduce = self._sigil_max("low_hp_damage_reduction", 0)
@@ -371,6 +529,7 @@ class CombatState:
 
     def _deal_enemy_attack_damage_to_player(self, raw_damage: int, damage_type: str = "physical", source: str = "enemy_attack") -> int:
         dmg = max(0, int(raw_damage))
+        dmg = self._apply_potion_incoming_damage_modifiers(dmg)
         dmg = self._apply_enemy_damage_reduction(dmg)
         dmg = self._apply_block_and_shield(dmg)
         dmg = self._apply_gold_shield(dmg)
@@ -453,9 +612,23 @@ class CombatState:
             return
 
         self.enemy_turn_pending = False
+
+        if self.enemy_skip_next_attack:
+            self.enemy_skip_next_attack = False
+            self.enemy_double_next_attack = False
+            self.log.append(f"{self.enemy.name} 的攻擊被取消。")
+            self.enemy.reset_timer()
+            self._clear_player_block()
+            if not self.is_over():
+                self._roll_awakened_cards()
+            return
+
         count = 1
         if getattr(self.enemy, "frenzy_hp_threshold", None) is not None and self.enemy.hp < int(self.enemy.frenzy_hp_threshold):
             count = max(1, int(getattr(self.enemy, "frenzy_attacks", 2)))
+        if self.enemy_double_next_attack:
+            count = max(count, max(2, int(getattr(self.enemy, "arbiter_low_damage_attacks", 2) or 2)))
+            self.enemy_double_next_attack = False
 
         for _ in range(count):
             self._enemy_attack_once()
@@ -792,17 +965,22 @@ class CombatState:
             self.log.append(f"竊盜高手獲得 {gold_gain} 金幣。")
 
         dmg = self._apply_player_attack_sigils(dmg, cards, result)
-
-        enemy_hp_before = self.enemy.hp
-        self.enemy.hp = max(0, self.enemy.hp - dmg)
-        dealt_damage = max(0, enemy_hp_before - self.enemy.hp)
+        dmg = self._apply_potion_player_damage_bonus(dmg)
 
         shadow_bonus_damage = 0
-        if self._has_sigil("shadow_slash") and result.attack_type == AttackType.TWO_PAIR and self.enemy.hp > 0:
+        shadow_slash_ready = self._has_sigil("shadow_slash") and result.attack_type == AttackType.TWO_PAIR
+        if shadow_slash_ready:
             shadow_bonus_damage = max(1, int(round(dmg * 0.5)))
-            before_shadow = self.enemy.hp
-            self.enemy.hp = max(0, self.enemy.hp - shadow_bonus_damage)
-            shadow_dealt = max(0, before_shadow - self.enemy.hp)
+
+        arbiter_damage_percent = self._arbiter_player_turn_damage_percent(dmg + shadow_bonus_damage)
+        if arbiter_damage_percent != 100:
+            dmg = max(0, int(round(dmg * arbiter_damage_percent / 100.0)))
+            shadow_bonus_damage = max(0, int(round(shadow_bonus_damage * arbiter_damage_percent / 100.0)))
+
+        dealt_damage = self._deal_damage_to_enemy(dmg, source="player_attack")
+
+        if shadow_slash_ready and shadow_bonus_damage > 0 and self.enemy.hp > 0:
+            shadow_dealt = self._deal_damage_to_enemy(shadow_bonus_damage, source="shadow_slash")
             dealt_damage += shadow_dealt
             self.log.append(f"影斬發動：第二擊造成 {shadow_bonus_damage} 點傷害。")
 
@@ -820,6 +998,7 @@ class CombatState:
         self._apply_played_card_poison(result.played_count)
         self.player_attack_count += 1
         self.previous_attack_type = result.attack_type
+        self._clear_enemy_block()
 
         if self.enemy.hp <= 0:
             self._grant_victory_battle_rewards()
@@ -871,6 +1050,18 @@ def load_enemies_json(path: Path) -> List[Enemy]:
             setattr(enemy, "poison_stacks_on_attack", int(raw.get("poison_stacks_on_attack", 0)))
         if "poison_damage_per_stack" in raw:
             setattr(enemy, "poison_damage_per_stack", int(raw.get("poison_damage_per_stack", 2)))
+
+        for key in (
+            "starting_shield",
+            "block_per_turn",
+            "arbiter_damage_threshold",
+            "arbiter_damage_reduction_percent",
+            "arbiter_low_damage_attacks",
+        ):
+            if key in raw:
+                setattr(enemy, key, int(raw.get(key, 0)))
+        if "arbiter_high_damage_skip_attack" in raw:
+            setattr(enemy, "arbiter_high_damage_skip_attack", bool(raw.get("arbiter_high_damage_skip_attack", False)))
 
         enemies.append(enemy)
     return enemies

@@ -6,7 +6,8 @@
       "type": "flat_damage",
       "value": 20,
       "cost": 30,
-      "desc": "每次攻擊 +20 傷害"
+      "desc": "每次攻擊 +20 傷害",
+      "rarity": "常見"
     },
     {
       "id": "steadfast",
@@ -14,7 +15,8 @@
       "type": "regen_per_turn",
       "value": 1,
       "cost": 40,
-      "desc": "每次行動前回復 1 HP"
+      "desc": "每次行動前回復 1 HP",
+      "rarity": "常見"
     },
     {
       "id": "thief",
@@ -22,7 +24,8 @@
       "type": "theft",
       "value": 75,
       "cost": 60,
-      "desc": "每 75 傷害 +1 金幣"
+      "desc": "每 75 傷害 +1 金幣",
+      "rarity": "常見"
     },
     {
       "id": "unity",
@@ -30,7 +33,8 @@
       "type": "five_card_multiplier",
       "value": 125,
       "cost": 60,
-      "desc": "用 5 張牌成型（非單挑）傷害 125%"
+      "desc": "用 5 張牌成型（非單挑）傷害 125%",
+      "rarity": "常見"
     },
     {
       "id": "soul_siphon",
@@ -38,7 +42,8 @@
       "type": "lifesteal_percent",
       "value": 5,
       "cost": 75,
-      "desc": "攻擊造成傷害後，回復造成傷害的 5%，至少回復 1 HP"
+      "desc": "攻擊造成傷害後，回復造成傷害的 5%，至少回復 1 HP",
+      "rarity": "常見"
     },
     {
       "id": "faith_strength",
@@ -46,7 +51,8 @@
       "type": "hand_limit_bonus",
       "value": 2,
       "cost": 85,
-      "desc": "裝備時手牌上限 +2"
+      "desc": "裝備時手牌上限 +2",
+      "rarity": "常見"
     },
     {
       "id": "golden_cloth_armor",
@@ -54,7 +60,8 @@
       "type": "gold_shield",
       "value": 1,
       "cost": 85,
-      "desc": "受到攻擊時，優先以金幣抵擋傷害；每 1 金幣抵擋 1 傷害。"
+      "desc": "受到攻擊時，優先以金幣抵擋傷害；每 1 金幣抵擋 1 傷害，金幣耗盡後才扣生命值",
+      "rarity": "常見"
     },
     {
       "id": "awakening",
@@ -62,7 +69,8 @@
       "type": "awakening",
       "value": 2,
       "cost": 95,
-      "desc": "每個攻擊回合開始時，隨機 2 張手牌獲得覺醒；覺醒卡牌打出時每張追加 10 傷害"
+      "desc": "每個攻擊回合開始時，隨機 2 張手牌獲得覺醒；覺醒卡牌打出時每張追加 10 傷害",
+      "rarity": "常見"
     },
     {
       "id": "preemptive_strike",
@@ -70,7 +78,8 @@
       "type": "first_attack_multiplier",
       "value": 150,
       "cost": 80,
-      "desc": "每場戰鬥第一次攻擊造成 150% 傷害"
+      "desc": "每場戰鬥第一次攻擊造成 150% 傷害",
+      "rarity": "常見"
     },
     {
       "id": "blood_armor",
@@ -78,7 +87,8 @@
       "type": "low_hp_damage_reduction",
       "value": 75,
       "cost": 95,
-      "desc": "生命值比例越低，受到敵人攻擊傷害越低，最高減傷 75%"
+      "desc": "生命值比例越低，受到敵人攻擊傷害越低，最高減傷 75%",
+      "rarity": "史詩"
     },
     {
       "id": "berserker",
@@ -86,7 +96,8 @@
       "type": "low_hp_damage_bonus",
       "value": 50,
       "cost": 90,
-      "desc": "生命值比例越低，造成傷害越高，最高增加 50%"
+      "desc": "生命值比例越低，造成傷害越高，最高增加 50%",
+      "rarity": "史詩"
     },
     {
       "id": "last_stand",
@@ -94,7 +105,8 @@
       "type": "last_stand",
       "value": 200,
       "cost": 110,
-      "desc": "每場戰鬥第一次受到致命攻擊時保留 1 HP，下一次攻擊傷害翻倍"
+      "desc": "每場戰鬥第一次受到致命攻擊時保留 1 HP，下一次攻擊傷害翻倍",
+      "rarity": "稀有"
     },
     {
       "id": "card_soul_resonance",
@@ -102,7 +114,8 @@
       "type": "card_soul_resonance",
       "value": 4,
       "cost": 70,
-      "desc": "一次打出 5 張牌時，每張牌額外追加 4 傷害"
+      "desc": "一次打出 5 張牌時，每張牌額外追加 4 傷害",
+      "rarity": "稀有"
     },
     {
       "id": "spade_brand",
@@ -110,7 +123,8 @@
       "type": "spade_brand",
       "value": 3,
       "cost": 70,
-      "desc": "每打出 1 張黑桃牌，追加 3 傷害；若全部都是黑桃，額外再追加 20 傷害"
+      "desc": "每打出 1 張黑桃牌，追加 3 傷害；若全部都是黑桃，額外再追加 20 傷害",
+      "rarity": "稀有"
     },
     {
       "id": "heart_oath",
@@ -118,7 +132,8 @@
       "type": "heart_heal",
       "value": 1,
       "cost": 70,
-      "desc": "每打出 1 張紅心牌，回復 1 HP；若本次攻擊包含 3 張以上紅心，額外回復 5 HP"
+      "desc": "每打出 1 張紅心牌，回復 1 HP；若本次攻擊包含 3 張以上紅心，額外回復 5 HP",
+      "rarity": "史詩"
     },
     {
       "id": "diamond_greed",
@@ -126,7 +141,8 @@
       "type": "diamond_gold_bonus",
       "value": 3,
       "cost": 65,
-      "desc": "每打出 1 張方塊牌，本場戰鬥勝利後額外獲得 3 金幣"
+      "desc": "每打出 1 張方塊牌，本場戰鬥勝利後額外獲得 3 金幣",
+      "rarity": "稀有"
     },
     {
       "id": "club_fang",
@@ -134,7 +150,8 @@
       "type": "club_fang",
       "value": 2,
       "cost": 75,
-      "desc": "每打出 1 張梅花牌，使敵人獲得 1 層裂傷；每層裂傷使下一次攻擊追加 2 傷害，觸發後清空"
+      "desc": "每打出 1 張梅花牌，使敵人獲得 1 層裂傷；每層裂傷使下一次攻擊追加 2 傷害，觸發後清空",
+      "rarity": "常見"
     },
     {
       "id": "gambler_eye",
@@ -142,7 +159,8 @@
       "type": "gambler_eye",
       "value": 30,
       "cost": 85,
-      "desc": "每場戰鬥第一次打出兩對以上牌型時，隨機獲得 30 金幣、回復 10 HP，或追加 30 傷害"
+      "desc": "每場戰鬥第一次打出兩對以上牌型時，隨機獲得 30 金幣、回復 10 HP，或追加 30 傷害",
+      "rarity": "稀有"
     },
     {
       "id": "demon_counter",
@@ -150,127 +168,8 @@
       "type": "demon_counter",
       "value": 66,
       "cost": 100,
-      "desc": "每累積打出 6 張牌後，下一次攻擊追加 66 傷害，並失去 6 HP"
-    },
-    {
-      "id": "chain_march_boots",
-      "name": "鎖鏈軍靴",
-      "type": "march_damage_bonus",
-      "value": 20,
-      "cost": 80,
-      "desc": "打出「行軍」牌型時，本次攻擊傷害增加 20%"
-    },
-    {
-      "id": "shadow_cut",
-      "name": "影斬",
-      "type": "shadow_slash",
-      "value": 50,
-      "cost": 95,
-      "desc": "打出「雙重二元」時追加第二次攻擊，第二擊造成原傷害 50%"
-    },
-    {
-      "id": "crown_rift",
-      "name": "王冠裂印",
-      "type": "crown_rift",
-      "value": 100,
-      "cost": 120,
-      "desc": "打出「惡魔之爪」時，額外造成 100 固定傷害"
-    },
-    {
-      "id": "blood_stairway",
-      "name": "血色階梯",
-      "type": "blood_stair",
-      "value": 8,
-      "cost": 85,
-      "desc": "打出「行軍」時，回復本次實際造成傷害的 8% HP，至少 1 HP"
-    },
-    {
-      "id": "steel_alliance",
-      "name": "鋼鐵同盟",
-      "type": "steel_alliance",
-      "value": 30,
-      "cost": 85,
-      "desc": "打出「部落」牌型時，下一次敵人攻擊傷害降低 30%"
-    },
-    {
-      "id": "double_snake_ring",
-      "name": "雙蛇戒",
-      "type": "dual_serpent_ring",
-      "value": 12,
-      "cost": 65,
-      "desc": "打出「二元體」時追加 12 傷害；若連續兩次都打出二元體，第二次追加 30 傷害"
-    },
-    {
-      "id": "three_eye_totem",
-      "name": "三眼圖騰",
-      "type": "three_eye_totem",
-      "value": 5,
-      "cost": 75,
-      "desc": "打出「三重奏」時，下一次敵人攻擊傷害 -5"
-    },
-    {
-      "id": "full_moon_bone",
-      "name": "滿月獸骨",
-      "type": "full_moon_bone",
-      "value": 25,
-      "cost": 100,
-      "desc": "打出「戰團」時，本次攻擊傷害增加 25%，並回復 5 HP"
-    },
-    {
-      "id": "four_corner_cage",
-      "name": "四角牢籠",
-      "type": "four_corner_cage",
-      "value": 1,
-      "cost": 110,
-      "desc": "打出「四分體」時，敵人攻擊倒數 +1；每場戰鬥最多觸發 2 次"
-    },
-    {
-      "id": "decapitation_flag",
-      "name": "斷頭旗",
-      "type": "decapitation_flag",
-      "value": 40,
-      "cost": 90,
-      "desc": "敵人生命低於 25% 時，使用有效牌型攻擊造成的傷害增加 40%"
-    },
-    {
-      "id": "gambler_broken_finger",
-      "name": "賭徒的殘指",
-      "type": "gambler_finger",
-      "value": 35,
-      "cost": 70,
-      "desc": "打出「單挑」時，有 35% 機率造成 2 倍傷害；失敗則本次傷害降低 30%"
-    },
-    {
-      "id": "mirror_deck_box",
-      "name": "鏡像牌匣",
-      "type": "mirror_card_box",
-      "value": 35,
-      "cost": 90,
-      "desc": "若連續打出相同牌型，第二次開始該牌型傷害增加 35%"
-    },
-    {
-      "id": "reverse_sequence_gear",
-      "name": "逆序齒輪",
-      "type": "reverse_gear",
-      "value": 40,
-      "cost": 75,
-      "desc": "打出低階「行軍」（A-2-3-4-5 或 2-3-4-5-6）時，額外追加 40 傷害"
-    },
-    {
-      "id": "star_shatter_gauntlet",
-      "name": "碎星手套",
-      "type": "starbreaker_gauntlet",
-      "value": 8,
-      "cost": 80,
-      "desc": "一次打出 5 張牌時，每張牌額外追加 8 傷害"
-    },
-    {
-      "id": "judgement_scale",
-      "name": "審判天秤",
-      "type": "judgement_scale",
-      "value": 25,
-      "cost": 95,
-      "desc": "若本次牌型等級低於上一次，傷害增加 25%；若高於上一次，回復 5 HP"
+      "desc": "每累積打出 6 張牌後，下一次攻擊追加 66 傷害，並失去 6 HP",
+      "rarity": "史詩"
     }
   ]
 }

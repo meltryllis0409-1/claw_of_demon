@@ -92,7 +92,8 @@
       "name": "砂殼甲蟲",
       "hp": 620,
       "attack_damage": 2,
-      "attack_timer": 3
+      "attack_timer": 3,
+      "block_per_turn": 20
     },
     {
       "id": "mire_walker",
@@ -152,7 +153,8 @@
       "name": "碎盾兵",
       "hp": 700,
       "attack_damage": 3,
-      "attack_timer": 3
+      "attack_timer": 3,
+      "starting_shield": 50
     },
     {
       "id": "ash_scavenger",
@@ -227,6 +229,18 @@
       "frenzy_attacks": 2
     },
     {
+      "id": "elite_arbiter",
+      "tier": "elite",
+      "name": "仲裁者",
+      "hp": 500,
+      "attack_damage": 6,
+      "attack_timer": 2,
+      "arbiter_damage_threshold": 100,
+      "arbiter_damage_reduction_percent": 50,
+      "arbiter_low_damage_attacks": 2,
+      "arbiter_high_damage_skip_attack": true
+    },
+    {
       "id": "venom_claw_matriarch",
       "tier": "boss",
       "name": "瘴爪女王",
@@ -235,7 +249,7 @@
       "attack_timer": 3,
       "poison_on_attack": true,
       "poison_stacks_on_attack": 1,
-      "poison_damage_per_stack": 2
+      "poison_damage_per_stack": 1
     }
   ]
 }

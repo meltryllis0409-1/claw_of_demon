@@ -6,6 +6,45 @@ from typing import Dict, Any, List, Tuple
 from .evaluator import AttackType
 
 
+SIGIL_RARITY_COMMON = "常見"
+SIGIL_RARITY_RARE = "稀有"
+SIGIL_RARITY_EPIC = "史詩"
+SIGIL_RARITY_LEGENDARY = "傳說"
+
+SIGIL_RARITY_ORDER: Dict[str, int] = {
+    SIGIL_RARITY_COMMON: 1,
+    SIGIL_RARITY_RARE: 2,
+    SIGIL_RARITY_EPIC: 3,
+    SIGIL_RARITY_LEGENDARY: 4,
+}
+
+SIGIL_RARITY_COLORS: Dict[str, Tuple[int, int, int]] = {
+    SIGIL_RARITY_COMMON: (86, 220, 116),
+    SIGIL_RARITY_RARE: (92, 166, 255),
+    SIGIL_RARITY_EPIC: (190, 106, 255),
+    SIGIL_RARITY_LEGENDARY: (245, 190, 55),
+}
+
+SIGIL_RARITY_ALIASES: Dict[str, str] = {
+    "common": SIGIL_RARITY_COMMON,
+    "rare": SIGIL_RARITY_RARE,
+    "epic": SIGIL_RARITY_EPIC,
+    "legendary": SIGIL_RARITY_LEGENDARY,
+    "常見": SIGIL_RARITY_COMMON,
+    "稀有": SIGIL_RARITY_RARE,
+    "史詩": SIGIL_RARITY_EPIC,
+    "傳說": SIGIL_RARITY_LEGENDARY,
+}
+
+
+def normalize_sigil_rarity(value: Any) -> str:
+    return SIGIL_RARITY_ALIASES.get(str(value), SIGIL_RARITY_COMMON)
+
+
+def sigil_rarity_color(rarity: Any) -> Tuple[int, int, int]:
+    return SIGIL_RARITY_COLORS.get(normalize_sigil_rarity(rarity), SIGIL_RARITY_COLORS[SIGIL_RARITY_COMMON])
+
+
 @dataclass(frozen=True)
 class Sigil:
     sigil_id: str
@@ -14,6 +53,7 @@ class Sigil:
     value: int
     cost: int = 0
     desc: str = ""
+    rarity: str = SIGIL_RARITY_COMMON
 
     @staticmethod
     def from_dict(d: Dict[str, Any]) -> "Sigil":
@@ -24,7 +64,16 @@ class Sigil:
             value=int(d.get("value", 0)),
             cost=int(d.get("cost", 0)),
             desc=str(d.get("desc", "")),
+            rarity=normalize_sigil_rarity(d.get("rarity", SIGIL_RARITY_COMMON)),
         )
+
+    @property
+    def rarity_color(self) -> Tuple[int, int, int]:
+        return sigil_rarity_color(self.rarity)
+
+    @property
+    def rarity_rank(self) -> int:
+        return SIGIL_RARITY_ORDER.get(normalize_sigil_rarity(self.rarity), 1)
 
 
 def regen_amount(sigils: List[Sigil]) -> int:

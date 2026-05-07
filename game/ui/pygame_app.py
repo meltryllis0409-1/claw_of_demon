@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import json
+import math
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,6 +28,7 @@ CARD_W, CARD_H = 100, 140
 HAND_GAP = 12
 ICON_BASE = 36
 ICON_SIZE = ICON_BASE * 2
+SPECIAL_MAP_ICON_SCALE = 2.5
 ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 
 _IMAGE_CACHE: dict[tuple[str, Optional[Tuple[int, int]]], Optional[pygame.Surface]] = {}
@@ -134,6 +136,71 @@ def _draw_glow(screen: pygame.Surface, center: Tuple[int, int], radius: int, col
     surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
     pygame.draw.circle(surf, (*color, alpha), (radius, radius), radius)
     screen.blit(surf, (center[0] - radius, center[1] - radius))
+
+
+def _shrink_line_ends(
+    start: Tuple[int, int],
+    end: Tuple[int, int],
+    inset: int = 30,
+    start_inset: Optional[int] = None,
+    end_inset: Optional[int] = None,
+) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+    x1, y1 = start
+    x2, y2 = end
+    dx = x2 - x1
+    dy = y2 - y1
+    dist = math.hypot(dx, dy)
+
+    si = inset if start_inset is None else max(0, int(start_inset))
+    ei = inset if end_inset is None else max(0, int(end_inset))
+    if dist <= si + ei + 1:
+        mid = (int((x1 + x2) / 2), int((y1 + y2) / 2))
+        return mid, mid
+
+    ux = dx / dist
+    uy = dy / dist
+    return (int(x1 + ux * si), int(y1 + uy * si)), (int(x2 - ux * ei), int(y2 - uy * ei))
+
+
+def _draw_dashed_path(
+    screen: pygame.Surface,
+    start: Tuple[int, int],
+    end: Tuple[int, int],
+    color: Tuple[int, int, int] = (84, 67, 45),
+    width: int = 3,
+    dash_len: int = 7,
+    gap_len: int = 9,
+) -> None:
+    x1, y1 = start
+    x2, y2 = end
+    dx = x2 - x1
+    dy = y2 - y1
+    dist = math.hypot(dx, dy)
+    if dist <= 0:
+        return
+
+    ux = dx / dist
+    uy = dy / dist
+    step = max(1, dash_len + gap_len)
+    t = 0.0
+
+    while t < dist:
+        seg_start = t
+        seg_end = min(t + dash_len, dist)
+        sx = x1 + ux * seg_start
+        sy = y1 + uy * seg_start
+        ex = x1 + ux * seg_end
+        ey = y1 + uy * seg_end
+
+        pygame.draw.line(
+            screen,
+            color,
+            (int(sx), int(sy)),
+            (int(ex), int(ey)),
+            width,
+        )
+
+        t += step
 
 
 def _blit_text_soft_outline(
@@ -300,6 +367,49 @@ DAMAGE_FX_COLORS: Dict[str, Tuple[int, int, int]] = {
 }
 
 
+SIGIL_RARITY_COLORS: Dict[str, Tuple[int, int, int]] = {
+    "常見": (80, 210, 110),
+    "稀有": (85, 165, 255),
+    "史詩": (185, 95, 255),
+    "傳說": (248, 196, 65),
+}
+
+SIGIL_RARITY_ALIASES: Dict[str, str] = {
+    "common": "常見",
+    "rare": "稀有",
+    "epic": "史詩",
+    "legendary": "傳說",
+    "normal": "常見",
+}
+
+
+def _sigil_rarity(sigil: Sigil) -> str:
+    rarity = getattr(sigil, "rarity", "常見")
+    if callable(rarity):
+        try:
+            rarity = rarity()
+        except TypeError:
+            rarity = "常見"
+    rarity_text = str(rarity or "常見").strip()
+    rarity_text = SIGIL_RARITY_ALIASES.get(rarity_text.lower(), rarity_text)
+    return rarity_text if rarity_text in SIGIL_RARITY_COLORS else "常見"
+
+
+def _sigil_name_color(sigil: Sigil) -> Tuple[int, int, int]:
+    color = getattr(sigil, "rarity_color", None)
+    if callable(color):
+        try:
+            color = color()
+        except TypeError:
+            color = None
+    if isinstance(color, (tuple, list)) and len(color) >= 3:
+        try:
+            return (int(color[0]), int(color[1]), int(color[2]))
+        except Exception:
+            pass
+    return SIGIL_RARITY_COLORS[_sigil_rarity(sigil)]
+
+
 def sort_hand_by_value(hand: List[Card]) -> None:
     hand.sort(key=lambda c: (RANK_ORDER.get(c.rank, 99), c.suit.value))
 
@@ -443,8 +553,8 @@ class MapScene:
         )
 
     def _node_screen_pos(self, node: MapNode, rect: pygame.Rect) -> Tuple[int, int]:
-        pad_x = 90
-        pad_y = 90
+        pad_x = 145
+        pad_y = 145
         x = rect.x + pad_x + int(node.x * (rect.w - 2 * pad_x))
         y = rect.y + pad_y + int(node.y * (rect.h - 2 * pad_y))
         return x, y
@@ -475,6 +585,22 @@ class MapScene:
         }
         return icons.get(t.name, "combat.png")
 
+    def _node_icon_scale(self, node: MapNode) -> float:
+        if node.node_type.name in {"START", "BOSS"}:
+            return SPECIAL_MAP_ICON_SCALE
+        return 1.0
+
+    def _node_icon_size(self, node: MapNode) -> int:
+        return max(1, int(ICON_SIZE * self._node_icon_scale(node)))
+
+    def _node_hit_radius(self, node: MapNode) -> int:
+        return max(18, int(18 * self._node_icon_scale(node)))
+
+    def _node_path_inset(self, node: MapNode) -> int:
+        if node.node_type.name in {"START", "BOSS"}:
+            return self._node_icon_size(node) // 2 + 8
+        return 30
+
     def clickable_nodes(self) -> List[int]:
         g = self.run.map_graph
         cur = g.nodes[self.run.current_node_id]
@@ -491,7 +617,8 @@ class MapScene:
             x, y = self._node_screen_pos(node, content_rect)
             if not view_rect.collidepoint((x, y)):
                 continue
-            if (mouse_pos[0] - x) ** 2 + (mouse_pos[1] - y) ** 2 <= 18 ** 2:
+            r = self._node_hit_radius(node)
+            if (mouse_pos[0] - x) ** 2 + (mouse_pos[1] - y) ** 2 <= r ** 2:
                 return nid
         return None
 
@@ -508,7 +635,8 @@ class MapScene:
             x, y = self._node_screen_pos(node, content_rect)
             if not view_rect.collidepoint((x, y)):
                 continue
-            if (pos[0] - x) ** 2 + (pos[1] - y) ** 2 <= 18 ** 2 and nid in clickables:
+            r = self._node_hit_radius(node)
+            if (pos[0] - x) ** 2 + (pos[1] - y) ** 2 <= r ** 2 and nid in clickables:
                 return nid
         return None
 
@@ -551,9 +679,11 @@ class MapScene:
         pygame.draw.rect(tooltip, (255, 255, 255, 80), rect, width=1, border_radius=8)
         screen.blit(tooltip, (x, y))
 
+        title_color = _sigil_name_color(sigil)
         text_y = y + padding_y
         for i, line in enumerate(lines):
-            surf = self.font.render(line, True, (245, 245, 245))
+            color = title_color if i == 0 else (245, 245, 245)
+            surf = self.font.render(line, True, color)
             screen.blit(surf, (x + padding_x, text_y))
             text_y += line_h
             if i == 0 and len(lines) > 1:
@@ -652,17 +782,33 @@ class MapScene:
             for nid2 in node.next_ids:
                 n2 = g.nodes[nid2]
                 x2, y2 = self._node_screen_pos(n2, content_rect)
-                pygame.draw.line(screen, (35, 35, 35), (x1, y1), (x2, y2), 7)
-                pygame.draw.line(screen, (225, 225, 215), (x1, y1), (x2, y2), 4)
+                path_start, path_end = _shrink_line_ends(
+                    (x1, y1),
+                    (x2, y2),
+                    start_inset=self._node_path_inset(node),
+                    end_inset=self._node_path_inset(n2),
+                )
+                _draw_dashed_path(
+                    screen,
+                    path_start,
+                    path_end,
+                    color=(84, 67, 45),
+                    width=3,
+                    dash_len=7,
+                    gap_len=9,
+                )
 
         for node in g.nodes.values():
             x, y = self._node_screen_pos(node, content_rect)
-            if node.node_id in clickables:
-                _draw_glow(screen, (x, y), 36, (255, 230, 120), 80)
-            if hovered == node.node_id:
-                _draw_glow(screen, (x, y), 52, (255, 255, 200), 120)
+            scale = self._node_icon_scale(node)
+            icon_size = self._node_icon_size(node)
 
-            icon = _load_image("map_icons", self._icon_name(node.node_type), size=(ICON_SIZE, ICON_SIZE))
+            if node.node_id in clickables:
+                _draw_glow(screen, (x, y), int(36 * scale), (255, 230, 120), 80)
+            if hovered == node.node_id:
+                _draw_glow(screen, (x, y), int(52 * scale), (255, 255, 200), 120)
+
+            icon = _load_image("map_icons", self._icon_name(node.node_type), size=(icon_size, icon_size))
             if icon is not None:
                 icon = icon.copy()
                 if node.node_id not in clickables and hovered != node.node_id:
@@ -679,13 +825,15 @@ class MapScene:
                     "TREASURE": (220, 185, 60),
                     "BOSS": (90, 40, 40),
                 }
-                pygame.draw.circle(screen, fallback_colors.get(node.node_type.name, (90, 120, 200)), (x, y), 18)
-                pygame.draw.circle(screen, (30, 30, 30), (x, y), 18, 2)
+                fallback_radius = self._node_hit_radius(node)
+                pygame.draw.circle(screen, fallback_colors.get(node.node_type.name, (90, 120, 200)), (x, y), fallback_radius)
+                pygame.draw.circle(screen, (30, 30, 30), (x, y), fallback_radius, 2)
 
+            label_offset = icon_size // 2 + 22
             if hovered == node.node_id:
-                _blit_text_outline(screen, self.font, self._label(node.node_type), (x, y - 58), center=True)
+                _blit_text_outline(screen, self.font, self._label(node.node_type), (x, y - label_offset), center=True)
             if node.cleared:
-                _blit_text_outline(screen, self.font, "CLEAR!", (x, y + 46), center=True)
+                _blit_text_outline(screen, self.font, "CLEAR!", (x, y + label_offset), center=True)
 
         screen.set_clip(old_clip)
 
@@ -740,7 +888,14 @@ class MapScene:
                         hovered_sigil = s
 
                     mark = "已裝備" if s.sigil_id in self.run.equipped_sigils else "可裝備"
-                    _blit_text_outline(screen, self.font, s.name, (r.x + 52, r.y + 8))
+                    _blit_text_outline(
+                        screen,
+                        self.font,
+                        s.name,
+                        (r.x + 52, r.y + 8),
+                        fg=_sigil_name_color(s),
+                        outline=(20, 20, 20),
+                    )
                     _blit_text_outline(screen, self.font, mark, (r.x + 52, r.y + 26))
                     y += 60
 
@@ -753,96 +908,466 @@ class ShopScene:
         self.run = run
         self.all_sigils = all_sigils
         available_sigils = [s for s in all_sigils if s.sigil_id not in self.run.owned_sigils]
-        self.shop_sigils = sample(available_sigils, min(4, len(available_sigils))) if available_sigils else []
+        self.shop_sigils = sample(available_sigils, min(3, len(available_sigils))) if available_sigils else []
+        self.shop_potions = self._roll_potions()
         self.font = font
         self.font_big = font_big
         self.msg = ""
+        self.hover_item: Optional[Dict[str, Any]] = None
+        self.item_regions: List[Dict[str, Any]] = []
+        self.bought_potion_ids: set[str] = set()
+        self.btn_leave = Button(pygame.Rect(0, 0, 120, 44), "離開")
+
+        if not hasattr(self.run, "sigil_slot_buy_count"):
+            self.run.sigil_slot_buy_count = 0
+
+    def _roll_potions(self) -> List[Dict[str, Any]]:
+        potion_pool = [
+            {
+                "id": "greed_potion",
+                "name": "貪婪藥水",
+                "desc": "接下來 5 場戰鬥金幣掉落量 +100%，但受到傷害 +20%。",
+                "cost": 100,
+                "icon": "potion_greed.png",
+                "effect_type": "greed",
+                "battles": 5,
+            },
+            {
+                "id": "stone_skin_potion",
+                "name": "石膚藥劑",
+                "desc": "接下來 4 場戰鬥開始時獲得 10 點護盾。",
+                "cost": 95,
+                "icon": "potion_stoneskin.png",
+                "effect_type": "stone_skin",
+                "battles": 4,
+                "shield": 10,
+            },
+            {
+                "id": "healing_potion",
+                "name": "回復藥水",
+                "desc": "立即回復 20 HP。",
+                "cost": 55,
+                "icon": "potion_heal.png",
+                "effect_type": "heal",
+                "heal": 20,
+            },
+            {
+                "id": "regeneration_potion",
+                "name": "再生劑",
+                "desc": "接下來 5 回合，每回合回復 10 HP。",
+                "cost": 105,
+                "icon": "potion_regen.png",
+                "effect_type": "regen",
+                "turns": 5,
+                "heal_per_turn": 10,
+            },
+            {
+                "id": "rage_potion",
+                "name": "憤怒藥劑",
+                "desc": "接下來 3 場戰鬥內，造成傷害 +50%。",
+                "cost": 140,
+                "icon": "potion_rage.png",
+                "effect_type": "rage",
+                "battles": 3,
+            },
+            {
+                "id": "resistance_potion",
+                "name": "抗擊藥劑",
+                "desc": "接下來 3 場戰鬥內，受到傷害 -25%。",
+                "cost": 125,
+                "icon": "potion_resistance.png",
+                "effect_type": "resistance",
+                "battles": 3,
+            },
+        ]
+        return sample(potion_pool, min(3, len(potion_pool)))
+
+    def _slot_cost(self) -> int:
+        return 75 * (2 ** int(getattr(self.run, "sigil_slot_buy_count", 0)))
+
+    def _draw_item_glow(self, screen: pygame.Surface, center: Tuple[int, int], hovered: bool, affordable: bool) -> None:
+        if hovered:
+            _draw_glow(screen, center, 82, (255, 231, 140), 72)
+            _draw_glow(screen, center, 54, (255, 248, 190), 86)
+
+    def _draw_price(self, screen: pygame.Surface, center_x: int, y: int, cost: int, affordable: bool) -> None:
+        icon = _load_image("items", "gold.png", size=(30, 30))
+        text = str(int(cost))
+        tw = self.font.size(text)[0]
+        total_w = 34 + tw
+        x = center_x - total_w // 2
+        if icon is not None:
+            screen.blit(icon, (x, y))
+        else:
+            pygame.draw.circle(screen, (222, 157, 38), (x + 15, y + 15), 13)
+            pygame.draw.circle(screen, (80, 50, 10), (x + 15, y + 15), 13, 2)
+        _blit_text_soft_outline(
+            screen,
+            self.font,
+            text,
+            (x + 36, y + 3),
+            fg=((246, 174, 48) if affordable else (220, 55, 45)),
+            outline=(5, 5, 5),
+            outline_alpha=175,
+        )
+
+    def _draw_shop_item(
+        self,
+        screen: pygame.Surface,
+        kind: str,
+        item_id: str,
+        name: str,
+        desc: str,
+        cost: int,
+        center: Tuple[int, int],
+        icon: Optional[pygame.Surface],
+        fallback_color: Tuple[int, int, int],
+        mouse_pos: Tuple[int, int],
+        name_color: Optional[Tuple[int, int, int]] = None,
+    ) -> None:
+        cx, cy = center
+        hit_rect = pygame.Rect(0, 0, 118, 142)
+        hit_rect.center = (cx, cy + 14)
+        hovered = hit_rect.collidepoint(mouse_pos)
+        affordable = self.run.gold >= cost
+
+        self._draw_item_glow(screen, (cx, cy), hovered, affordable)
+
+        if icon is not None:
+            icon_rect = icon.get_rect(center=(cx, cy))
+            screen.blit(icon, icon_rect)
+        else:
+            pygame.draw.circle(screen, fallback_color, (cx, cy), 32)
+            pygame.draw.circle(screen, (25, 22, 18), (cx, cy), 32, 3)
+            pygame.draw.circle(screen, (255, 240, 170), (cx - 10, cy - 12), 7)
+            if kind == "slot":
+                pygame.draw.rect(screen, (230, 216, 160), pygame.Rect(cx - 22, cy - 28, 44, 56), border_radius=8)
+                pygame.draw.rect(screen, (45, 35, 25), pygame.Rect(cx - 22, cy - 28, 44, 56), 3, border_radius=8)
+                _blit_text_outline(screen, self.font_big, "+", (cx, cy), fg=(120, 60, 35), outline=(245, 230, 170), center=True)
+
+        if hovered:
+            pygame.draw.circle(screen, (255, 226, 128), (cx, cy), 43, 3)
+
+        display_name_color = name_color if name_color is not None else (240, 226, 190)
+        _blit_text_outline(screen, self.font, name, (cx, cy + 50), fg=display_name_color, outline=(18, 12, 8), center=True)
+        self._draw_price(screen, cx, cy + 78, cost, affordable)
+
+        item_info = {
+            "kind": kind,
+            "id": item_id,
+            "name": name,
+            "desc": desc,
+            "cost": cost,
+            "rect": hit_rect,
+            "name_color": display_name_color,
+        }
+        self.item_regions.append(item_info)
+        if hovered:
+            self.hover_item = item_info
+
+    def _draw_tooltip(self, screen: pygame.Surface, sw: int, sh: int, mouse_pos: Tuple[int, int]) -> None:
+        if self.hover_item is None:
+            return
+
+        title = str(self.hover_item.get("name", ""))
+        desc = str(self.hover_item.get("desc", ""))
+        cost = int(self.hover_item.get("cost", 0))
+        lines = [title] + _wrap_text(self.font, desc, 280) + [f"價格：{cost} 金幣"]
+        padding_x = 13
+        padding_y = 10
+        line_h = 24
+        tooltip_w = min(330, max(180, max(self.font.size(line)[0] for line in lines) + padding_x * 2))
+        tooltip_h = padding_y * 2 + len(lines) * line_h
+
+        x = mouse_pos[0] + 18
+        y = mouse_pos[1] + 18
+        if x + tooltip_w > sw - 8:
+            x = mouse_pos[0] - tooltip_w - 18
+        if y + tooltip_h > sh - 8:
+            y = sh - tooltip_h - 8
+        x = max(8, x)
+        y = max(8, y)
+
+        tooltip = pygame.Surface((tooltip_w, tooltip_h), pygame.SRCALPHA)
+        pygame.draw.rect(tooltip, (0, 0, 0, 220), tooltip.get_rect(), border_radius=8)
+        pygame.draw.rect(tooltip, (255, 230, 170, 80), tooltip.get_rect(), width=1, border_radius=8)
+        screen.blit(tooltip, (x, y))
+
+        title_color = self.hover_item.get("name_color", (255, 228, 160))
+        if not (isinstance(title_color, (tuple, list)) and len(title_color) >= 3):
+            title_color = (255, 228, 160)
+        ty = y + padding_y
+        for i, line in enumerate(lines):
+            color = tuple(title_color[:3]) if i == 0 else (245, 245, 245)
+            surf = self.font.render(line, True, color)
+            screen.blit(surf, (x + padding_x, ty))
+            ty += line_h
 
     def render(self, screen: pygame.Surface, sw: int, sh: int) -> None:
         bg = _load_image("backgrounds", "shop_bg.png", size=(sw, sh))
         if bg is not None:
             screen.blit(bg, (0, 0))
         else:
-            screen.fill((245, 246, 250))
-        _blit_text_outline(screen, self.font_big, "SHOP", (30, 20))
-        _blit_text_outline(screen, self.font, f"生命值 {self.run.hp}/{self.run.max_hp}   金幣 {self.run.gold}   紋章插槽 {self.run.unlocked_slots}", (30, 60))
-        panel = pygame.Rect(30, 90, sw - 60, sh - 160)
-        pygame.draw.rect(screen, (255, 255, 255), panel, border_radius=18)
-        pygame.draw.rect(screen, (30, 30, 30), panel, width=2, border_radius=18)
+            screen.fill((45, 38, 32))
 
-        y = panel.y + 20
-        self.btn_buy_slot = Button(pygame.Rect(panel.x + 20, y, 280, 46), "Buy Slot (50G)")
-        self.btn_buy_potion = Button(pygame.Rect(panel.x + 320, y, 280, 46), "Buy Potion +10HP (20G)")
-        self.btn_leave = Button(pygame.Rect(panel.right - 160, panel.bottom - 60, 140, 46), "Leave")
-        self.btn_buy_slot.draw(screen, self.font, enabled=(self.run.unlocked_slots < 5 and self.run.gold >= 50))
-        self.btn_buy_potion.draw(screen, self.font, enabled=(self.run.gold >= 20))
-        self.btn_leave.draw(screen, self.font, enabled=True)
+        _blit_text_outline(screen, self.font_big, "SHOP", (30, 20), fg=(242, 220, 165), outline=(12, 8, 6))
+        _draw_map_hp_bar(screen, self.font, pygame.Rect(30, 58, 240, 28), self.run.hp, self.run.max_hp)
+        _draw_map_gold(screen, self.font, 300, 56, self.run.gold)
+        _blit_text_outline(
+            screen,
+            self.font,
+            f"紋章插槽 {self.run.unlocked_slots}",
+            (410, 60),
+            fg=(245, 232, 190),
+            outline=(18, 12, 8),
+        )
 
-        potion = _load_image("items", "potion.png", size=(32, 32))
-        if potion is not None:
-            screen.blit(potion, (panel.x + 330, y + 7))
+        self.btn_leave.rect = pygame.Rect(sw - 142, 24, 108, 42)
+        pygame.draw.rect(screen, (18, 14, 12), self.btn_leave.rect, border_radius=10)
+        pygame.draw.rect(screen, (235, 210, 150), self.btn_leave.rect, width=2, border_radius=10)
+        leave_text = self.font.render("離開", True, (245, 225, 170))
+        screen.blit(leave_text, leave_text.get_rect(center=self.btn_leave.rect.center))
 
-        y += 70
-        _blit_text_outline(screen, self.font_big, "Sigils", (panel.x + 20, y))
-        y += 46
-        self.sigil_buttons: List[Tuple[str, Button]] = []
-        if not self.shop_sigils:
-            _blit_text_outline(screen, self.font, "目前沒有可購買的紋章", (panel.x + 20, y), fg=(90, 90, 90))
-        for s in self.shop_sigils:
-            owned = s.sigil_id in self.run.owned_sigils
-            cost = getattr(s, "cost", 0)
-            desc = getattr(s, "desc", "")
-            label = f"{s.name} ({cost}G) - {'OWNED' if owned else desc}"
-            b = Button(pygame.Rect(panel.x + 70, y, panel.w - 90, 40), label)
-            self.sigil_buttons.append((s.sigil_id, b))
-            b.draw(screen, self.font, enabled=(not owned and self.run.gold >= cost))
-            icon = _load_image("sigils", f"{s.sigil_id}.png", size=(38, 38))
-            if icon is not None:
-                screen.blit(icon, (panel.x + 20, y + 1))
-            y += 48
+        mouse_pos = pygame.mouse.get_pos()
+        self.item_regions = []
+        self.hover_item = None
+
+        _blit_text_outline(screen, self.font_big, "紋章", (int(sw * 0.10), int(sh * 0.20)), fg=(242, 220, 165), outline=(12, 8, 6))
+        _blit_text_outline(screen, self.font_big, "藥水", (int(sw * 0.10), int(sh * 0.52)), fg=(242, 220, 165), outline=(12, 8, 6))
+
+        sigil_centers = [
+            (int(sw * 0.15), int(sh * 0.34)),
+            (int(sw * 0.30), int(sh * 0.34)),
+            (int(sw * 0.45), int(sh * 0.34)),
+        ]
+        potion_centers = [
+            (int(sw * 0.15), int(sh * 0.66)),
+            (int(sw * 0.30), int(sh * 0.66)),
+            (int(sw * 0.45), int(sh * 0.66)),
+        ]
+        slot_center = (int(sw * 0.59), int(sh * 0.50))
+
+        for sigil, center in zip(self.shop_sigils, sigil_centers):
+            if sigil.sigil_id in self.run.owned_sigils:
+                continue
+            icon = _load_image("sigils", f"{sigil.sigil_id}.png", size=(72, 72))
+            self._draw_shop_item(
+                screen,
+                "sigil",
+                sigil.sigil_id,
+                sigil.name,
+                str(getattr(sigil, "desc", "")),
+                int(getattr(sigil, "cost", 0)),
+                center,
+                icon,
+                (130, 90, 180),
+                mouse_pos,
+                name_color=_sigil_name_color(sigil),
+            )
+
+        for potion, center in zip(self.shop_potions, potion_centers):
+            potion_id = str(potion.get("id", "potion"))
+            if potion_id in self.bought_potion_ids:
+                continue
+            icon_name = str(potion.get("icon", "potion.png"))
+            icon = _load_image("items", icon_name, size=(76, 76)) or _load_image("items", "potion.png", size=(76, 76))
+            self._draw_shop_item(
+                screen,
+                "potion",
+                potion_id,
+                str(potion.get("name", "藥水")),
+                str(potion.get("desc", "")),
+                int(potion.get("cost", 0)),
+                center,
+                icon,
+                (95, 185, 105),
+                mouse_pos,
+            )
+
+        slot_cost = self._slot_cost()
+        slot_icon = _load_image("items", "sigil_slot.png", size=(96, 116)) or _load_image("items", "slot.png", size=(96, 116))
+        self._draw_shop_item(
+            screen,
+            "slot",
+            "sigil_slot",
+            "紋章插槽",
+            "購買後紋章插槽 +1。此服務可重複購買，每次價格變為上次的 2 倍。",
+            slot_cost,
+            slot_center,
+            slot_icon,
+            (185, 120, 55),
+            mouse_pos,
+        )
 
         if self.msg:
-            _blit_text_outline(screen, self.font, self.msg, (30, sh - 52), fg=(180, 30, 30))
+            _blit_text_outline(screen, self.font, self.msg, (34, sh - 48), fg=(240, 210, 150), outline=(16, 10, 8))
+
+        self._draw_tooltip(screen, sw, sh, mouse_pos)
+
+    def _apply_potion(self, potion: Dict[str, Any]) -> str:
+        effect_type = str(potion.get("effect_type", ""))
+
+        if effect_type == "heal":
+            heal = max(0, int(potion.get("heal", 0)))
+            before = self.run.hp
+            self.run.hp = min(self.run.max_hp, self.run.hp + heal)
+            return f"回復 {self.run.hp - before} HP"
+
+        if effect_type == "regen":
+            turns = max(1, int(potion.get("turns", 5)))
+            amount = max(1, int(potion.get("heal_per_turn", 10)))
+            self.run.regen_potion_turns_left = int(getattr(self.run, "regen_potion_turns_left", 0)) + turns
+            self.run.regen_potion_amount = amount
+            return f"再生效果 +{turns} 回合，每回合回復 {amount} HP"
+
+        if effect_type == "greed":
+            battles = max(1, int(potion.get("battles", 5)))
+            self.run.greed_potion_battles_left = int(getattr(self.run, "greed_potion_battles_left", 0)) + battles
+            return f"貪婪效果 +{battles} 場戰鬥"
+
+        if effect_type == "stone_skin":
+            battles = max(1, int(potion.get("battles", 4)))
+            self.run.stone_skin_potion_battles_left = int(getattr(self.run, "stone_skin_potion_battles_left", 0)) + battles
+            return f"石膚效果 +{battles} 場戰鬥"
+
+        if effect_type == "rage":
+            battles = max(1, int(potion.get("battles", 3)))
+            self.run.rage_potion_battles_left = int(getattr(self.run, "rage_potion_battles_left", 0)) + battles
+            return f"憤怒效果 +{battles} 場戰鬥"
+
+        if effect_type == "resistance":
+            battles = max(1, int(potion.get("battles", 3)))
+            self.run.resistance_potion_battles_left = int(getattr(self.run, "resistance_potion_battles_left", 0)) + battles
+            return f"抗擊效果 +{battles} 場戰鬥"
+
+        return "已飲用藥水"
 
     def handle_click(self, pos: Tuple[int, int]) -> Optional[str]:
         if self.btn_leave.hit(pos):
             return "leave"
-        if self.btn_buy_slot.hit(pos):
-            if self.run.unlocked_slots >= 5:
-                self.msg = "插槽已滿"
-            elif self.run.gold < 50:
+
+        for item in self.item_regions:
+            rect = item.get("rect")
+            if not isinstance(rect, pygame.Rect) or not rect.collidepoint(pos):
+                continue
+
+            kind = str(item.get("kind", ""))
+            item_id = str(item.get("id", ""))
+            cost = int(item.get("cost", 0))
+
+            if self.run.gold < cost:
                 self.msg = "金幣不足"
-            else:
-                self.run.gold -= 50
-                self.run.unlocked_slots += 1
-                self.msg = "已購買插槽 +1"
-            return None
-        if self.btn_buy_potion.hit(pos):
-            if self.run.gold < 20:
-                self.msg = "金幣不足"
-            else:
-                self.run.gold -= 20
-                before = self.run.hp
-                self.run.hp = min(self.run.max_hp, self.run.hp + 10)
-                self.msg = f"回復 {self.run.hp - before} HP"
-            return None
-        for sid, b in self.sigil_buttons:
-            if b.hit(pos):
-                s = next((x for x in self.shop_sigils if x.sigil_id == sid), None)
-                if s is None:
-                    return None
-                cost = getattr(s, "cost", 0)
-                if sid in self.run.owned_sigils:
-                    self.msg = "已擁有"
-                elif self.run.gold < cost:
-                    self.msg = "金幣不足"
-                else:
-                    self.run.gold -= cost
-                    self.run.owned_sigils.add(sid)
-                    self.msg = f"購買 {s.name}"
                 return None
+
+            if kind == "sigil":
+                sigil = next((s for s in self.shop_sigils if s.sigil_id == item_id), None)
+                if sigil is None:
+                    return None
+                if item_id in self.run.owned_sigils:
+                    return None
+                self.run.gold -= cost
+                self.run.owned_sigils.add(item_id)
+                self.msg = f"購買紋章：{sigil.name}"
+                return None
+
+            if kind == "potion":
+                potion = next((p for p in self.shop_potions if str(p.get("id", "")) == item_id), None)
+                if potion is None or item_id in self.bought_potion_ids:
+                    return None
+                self.run.gold -= cost
+                self.msg = self._apply_potion(potion)
+                self.bought_potion_ids.add(item_id)
+                return None
+
+            if kind == "slot":
+                self.run.gold -= cost
+                self.run.unlocked_slots += 1
+                self.run.sigil_slot_buy_count = int(getattr(self.run, "sigil_slot_buy_count", 0)) + 1
+                self.msg = f"紋章插槽 +1；下次價格 {self._slot_cost()}G"
+                return None
+
         return None
 
+
+class OpeningScene:
+    def __init__(self, font: pygame.font.Font, font_big: pygame.font.Font, font_huge: pygame.font.Font) -> None:
+        self.font = font
+        self.font_big = font_big
+        self.font_huge = font_huge
+        self.start_label = "遊戲開始"
+
+    def _load_opening_background(self, sw: int, sh: int) -> Optional[pygame.Surface]:
+        for parts in (("backgrounds", "opening_bg.png"), ("ui", "opening_bg.png"), ("opening_bg.png",)):
+            bg = _load_image(*parts, size=(sw, sh))
+            if bg is not None:
+                return bg
+        return None
+
+    def _load_logo(self, sw: int, sh: int) -> Optional[pygame.Surface]:
+        for parts in (("ui", "gamelogo.png"), ("backgrounds", "gamelogo.png"), ("gamelogo.png",)):
+            raw = _load_image(*parts)
+            if raw is None:
+                continue
+            return _fit_surface_keep_ratio(raw, (min(760, int(sw * 0.78)), min(240, int(sh * 0.32))))
+        return None
+
+    def _start_text_rect(self, sw: int, sh: int) -> pygame.Rect:
+        text_surf = self.font_big.render(self.start_label, True, (245, 230, 180))
+        rect = text_surf.get_rect(center=(sw // 2, int(sh * 0.66)))
+        return rect.inflate(44, 30)
+
+    def handle_click(self, pos: Tuple[int, int], sw: int, sh: int) -> bool:
+        return self._start_text_rect(sw, sh).collidepoint(pos)
+
+    def render(self, screen: pygame.Surface, sw: int, sh: int) -> None:
+        bg = self._load_opening_background(sw, sh)
+        if bg is not None:
+            screen.blit(bg, (0, 0))
+        else:
+            screen.fill((12, 10, 14))
+            _draw_glow(screen, (sw // 2, int(sh * 0.34)), min(sw, sh) // 3, (110, 40, 40), 55)
+
+        dim = pygame.Surface((sw, sh), pygame.SRCALPHA)
+        dim.fill((0, 0, 0, 35))
+        screen.blit(dim, (0, 0))
+
+        logo = self._load_logo(sw, sh)
+        if logo is not None:
+            logo_rect = logo.get_rect(center=(sw // 2, int(sh * 0.28)))
+            screen.blit(logo, logo_rect)
+        else:
+            _blit_text_outline(
+                screen,
+                self.font_huge,
+                "Claw of Demon",
+                (sw // 2, int(sh * 0.28)),
+                fg=(245, 210, 150),
+                outline=(12, 6, 6),
+                center=True,
+                extra_bold=True,
+            )
+
+        mouse_pos = pygame.mouse.get_pos()
+        hit_rect = self._start_text_rect(sw, sh)
+        text_rect = self.font_big.render(self.start_label, True, (245, 230, 180)).get_rect(center=hit_rect.center)
+        hovered = hit_rect.collidepoint(mouse_pos)
+
+        if hovered:
+            underline_w = text_rect.w + 58
+            underline_h = 9
+            underline = pygame.Surface((underline_w, underline_h), pygame.SRCALPHA)
+            pygame.draw.rect(underline, (255, 220, 90, 120), underline.get_rect(), border_radius=5)
+            screen.blit(underline, (text_rect.centerx - underline_w // 2, text_rect.bottom + 9))
+
+        _blit_text_outline(
+            screen,
+            self.font_big,
+            self.start_label,
+            text_rect.center,
+            fg=((255, 236, 170) if hovered else (245, 225, 175)),
+            outline=(15, 9, 6),
+            center=True,
+        )
 
 class StartScene:
     def __init__(self, run: RunState, options: List[Dict[str, Any]], font: pygame.font.Font, font_big: pygame.font.Font) -> None:
@@ -852,55 +1377,166 @@ class StartScene:
         self.font_big = font_big
         self.msg = ""
         self.option_buttons: List[Tuple[Dict[str, Any], Button, bool]] = []
+        self.elapsed_ms = 0
+        self.scroll_duration_ms = 3900
+        self.reveal_delay_ms = 1800
+        self.fade_duration_ms = 650
+
+    def update(self, dt_ms: int) -> None:
+        self.elapsed_ms += max(0, int(dt_ms))
+
+    def _reveal_start_ms(self) -> int:
+        return self.scroll_duration_ms + self.reveal_delay_ms
+
+    def _reveal_alpha(self) -> float:
+        progress = (self.elapsed_ms - self._reveal_start_ms()) / max(1, self.fade_duration_ms)
+        return ease_out_cubic(progress)
+
+    def _load_start_background(self, sw: int, sh: int) -> Optional[pygame.Surface]:
+        for filename in ("startroom_bg.png", "stratroom_bg.png", "start_bg.png"):
+            raw = _load_image("backgrounds", filename)
+            if raw is None:
+                continue
+            rw, rh = raw.get_size()
+            if rw <= 0 or rh <= 0:
+                continue
+            target_h = max(sh, int(round(rh * (sw / rw))))
+            return _load_image("backgrounds", filename, size=(sw, target_h))
+        return None
+
+    def _draw_scrolling_background(self, screen: pygame.Surface, sw: int, sh: int) -> None:
+        bg = self._load_start_background(sw, sh)
+        if bg is None:
+            screen.fill((22, 18, 22))
+            return
+
+        bg_h = bg.get_height()
+        max_scroll = max(0, bg_h - sh)
+        progress = ease_out_cubic(self.elapsed_ms / max(1, self.scroll_duration_ms))
+        scroll_y = int(round(max_scroll * (1.0 - progress)))
+        screen.blit(bg, (0, -scroll_y))
 
     def render(self, screen: pygame.Surface, sw: int, sh: int) -> None:
-        bg = _load_image("backgrounds", "start_bg.png", size=(sw, sh))
-        if bg is not None:
-            screen.blit(bg, (0, 0))
-        else:
-            screen.fill((232, 226, 216))
+        self._draw_scrolling_background(screen, sw, sh)
 
-        _blit_text_outline(screen, self.font_big, "起始房間", (30, 20))
-        _blit_text_outline(screen, self.font, f"生命值 {self.run.hp}/{self.run.max_hp}   金幣 {self.run.gold}   紋章插槽 {len(self.run.equipped_sigils)}/{self.run.unlocked_slots}", (30, 60))
+        reveal_alpha = self._reveal_alpha()
+        if reveal_alpha <= 0.0:
+            self.option_buttons = []
+            return
 
-        panel = pygame.Rect(60, 100, sw - 120, sh - 150)
-        pygame.draw.rect(screen, (255, 255, 255), panel, border_radius=18)
-        pygame.draw.rect(screen, (30, 30, 30), panel, width=2, border_radius=18)
+        overlay = pygame.Surface((sw, sh), pygame.SRCALPHA)
 
-        _blit_text_outline(screen, self.font_big, "惡魔之爪的低語", (panel.x + 28, panel.y + 24))
+        _blit_text_outline(
+            overlay,
+            self.font_big,
+            "起始房間",
+            (30, 20),
+            fg=(245, 230, 190),
+            outline=(12, 8, 8),
+        )
+        _blit_text_outline(
+            overlay,
+            self.font,
+            f"生命值 {self.run.hp}/{self.run.max_hp}   金幣 {self.run.gold}   紋章插槽 {len(self.run.equipped_sigils)}/{self.run.unlocked_slots}",
+            (30, 60),
+            fg=(245, 245, 245),
+            outline=(10, 10, 10),
+        )
 
-        description = "一道漆黑的爪痕浮現在地面上。它沒有命令你前進，只是靜靜地提出交易。選擇一項祝福，然後開始這趟旅程。"
-        y = panel.y + 76
-        for line in _wrap_text(self.font, description, panel.w - 56):
-            _blit_text_outline(screen, self.font, line, (panel.x + 28, y))
+        title_y = 112
+        _blit_text_outline(
+            overlay,
+            self.font_big,
+            "雕像的輕語",
+            (70, title_y),
+            fg=(255, 214, 150),
+            outline=(15, 9, 8),
+        )
+
+        description = "雕像的眼角有一些早已乾涸凝固的血跡，像是從它的眼裡流出的。一個彷彿嘶吼而又尖銳的聲音撕開了沉寂，它要你做一個再簡單不過的選擇。"
+        y = title_y + 52
+        for line in _wrap_text(self.font, description, sw - 140):
+            _blit_text_outline(
+                overlay,
+                self.font,
+                line,
+                (70, y),
+                fg=(245, 240, 225),
+                outline=(8, 8, 8),
+            )
             y += 28
 
-        y += 18
         self.option_buttons = []
         options = [opt for opt in self.options if isinstance(opt, dict)]
         if not options:
             options = [{"label": "踏上旅程", "text": "無事發生。", "effects": []}]
 
+        option_gap = 14
+        option_h = 78
+        total_options_h = len(options) * option_h + max(0, len(options) - 1) * option_gap
+        option_start_y = max(y + 34, sh - total_options_h - 44)
+        option_w = min(sw - 140, 860)
+        option_x = (sw - option_w) // 2
+
+        mouse_pos = pygame.mouse.get_pos()
         for idx, option in enumerate(options, start=1):
             enabled = _option_enabled(self.run, option)
-            r = pygame.Rect(panel.x + 28, y, panel.w - 56, 82)
+            r = pygame.Rect(option_x, option_start_y, option_w, option_h)
             label = str(option.get("label", f"選項 {idx}"))
             text = str(option.get("text", ""))
             b = Button(r, f"{idx}. {label}")
-            b.draw(screen, self.font, enabled=enabled)
 
-            text_color = (50, 50, 50) if enabled else (130, 130, 130)
-            text_lines = _wrap_text(self.font, text, r.w - 28)
+            hovered = r.collidepoint(mouse_pos)
+            mask_alpha = 128 if enabled else 92
+            option_surf = pygame.Surface(r.size, pygame.SRCALPHA)
+            pygame.draw.rect(option_surf, (0, 0, 0, mask_alpha), option_surf.get_rect(), border_radius=12)
+            border_color = (255, 229, 150, 205) if hovered and enabled else (255, 230, 170, 95)
+            if not enabled:
+                border_color = (170, 170, 170, 85)
+            pygame.draw.rect(option_surf, border_color, option_surf.get_rect(), width=2, border_radius=12)
+            overlay.blit(option_surf, r.topleft)
+
+            label_color = (255, 222, 148) if enabled else (170, 170, 170)
+            desc_color = (238, 238, 238) if enabled else (145, 145, 145)
+            _blit_text_outline(
+                overlay,
+                self.font,
+                f"{idx}. {label}",
+                (r.x + 18, r.y + 10),
+                fg=label_color,
+                outline=(0, 0, 0),
+            )
+
+            text_lines = _wrap_text(self.font, text, r.w - 36)
             for line_i, line in enumerate(text_lines[:2]):
-                _blit_text_outline(screen, self.font, line, (r.x + 14, r.y + 42 + line_i * 22), fg=text_color)
+                _blit_text_outline(
+                    overlay,
+                    self.font,
+                    line,
+                    (r.x + 18, r.y + 40 + line_i * 21),
+                    fg=desc_color,
+                    outline=(0, 0, 0),
+                )
 
             self.option_buttons.append((option, b, enabled))
-            y += 96
+            option_start_y += option_h + option_gap
 
         if self.msg:
-            _blit_text_outline(screen, self.font, self.msg, (panel.x + 28, panel.bottom - 42), fg=(180, 30, 30))
+            _blit_text_outline(
+                overlay,
+                self.font,
+                self.msg,
+                (option_x, sh - 30),
+                fg=(255, 115, 100),
+                outline=(10, 10, 10),
+            )
+
+        overlay.set_alpha(max(0, min(255, int(255 * reveal_alpha))))
+        screen.blit(overlay, (0, 0))
 
     def handle_click(self, pos: Tuple[int, int]) -> Optional[Dict[str, Any]]:
+        if self.elapsed_ms < self._reveal_start_ms():
+            return None
         for option, button, enabled in self.option_buttons:
             if button.hit(pos):
                 if not enabled:
@@ -908,7 +1544,6 @@ class StartScene:
                     return None
                 return option
         return None
-
 
 class EventScene:
     def __init__(self, run: RunState, event_data: Dict[str, Any], font: pygame.font.Font, font_big: pygame.font.Font) -> None:
@@ -1035,7 +1670,14 @@ class SigilChoiceScene:
                     pygame.draw.circle(screen, (130, 90, 180), (r.x + 38, r.y + 44), 22)
                     pygame.draw.circle(screen, (30, 30, 30), (r.x + 38, r.y + 44), 22, 2)
 
-                _blit_text_outline(screen, self.font_big, f"{idx}. {sigil.name}", (r.x + 76, r.y + 10))
+                _blit_text_outline(
+                    screen,
+                    self.font_big,
+                    f"{idx}. {sigil.name}",
+                    (r.x + 76, r.y + 10),
+                    fg=_sigil_name_color(sigil),
+                    outline=(20, 20, 20),
+                )
                 desc = str(getattr(sigil, "desc", ""))
                 for line_i, line in enumerate(_wrap_text(self.font, desc, r.w - 100)[:2]):
                     _blit_text_outline(screen, self.font, line, (r.x + 76, r.y + 48 + line_i * 22), fg=(55, 55, 55))
@@ -1466,7 +2108,17 @@ class CombatScene:
             screen.blit(player_flash, (20, 18))
 
         _blit_text_outline(screen, self.font_big, f"Enemy: {enemy.name}", (30, 20))
-        self._draw_hp_bar(screen, pygame.Rect(30, 60, 280, 24), "Enemy HP", enemy.hp, enemy.max_hp, self.enemy_hp_display, (190, 45, 45))
+        self._draw_hp_bar(
+            screen,
+            pygame.Rect(30, 60, 280, 24),
+            "Enemy HP",
+            enemy.hp,
+            enemy.max_hp,
+            self.enemy_hp_display,
+            (190, 45, 45),
+            shield=getattr(self.combat, "enemy_shield", getattr(enemy, "shield", 0)),
+            block=getattr(self.combat, "enemy_block", getattr(enemy, "block", 0)),
+        )
         _blit_text_outline(screen, self.font, f"ATK: {enemy.attack_damage}  Timer: {enemy.attack_timer}", (30, 92))
         self._draw_hp_bar(
             screen,
@@ -1665,7 +2317,8 @@ def main() -> None:
     fullscreen = False
     windowed_size = (w, h)
 
-    scene = "map"
+    scene = "opening"
+    opening_scene = OpeningScene(font, font_big, font_huge)
     map_scene = MapScene(run, font, font_big)
     shop_scene: Optional[ShopScene] = None
     combat_scene: Optional[CombatScene] = None
@@ -1676,6 +2329,38 @@ def main() -> None:
     pending_sigil_choice_choices: List[Sigil] = []
     pending_sigil_choice_source: Optional[str] = None
     pending_sigil_choice_messages: List[str] = []
+
+    def apply_potion_battle_buffs(c: CombatState, combat_enemy: Enemy) -> None:
+        if getattr(combat_enemy, "enemy_id", "") == "training_dummy":
+            return
+
+        if int(getattr(run, "greed_potion_battles_left", 0)) > 0:
+            run.greed_potion_battles_left = max(0, int(getattr(run, "greed_potion_battles_left", 0)) - 1)
+            c.potion_gold_bonus_percent += 100
+            c.potion_damage_taken_bonus_percent += 20
+            c.log.append(f"貪婪藥水作用中：金幣掉落 +100%，受到傷害 +20%。剩餘 {run.greed_potion_battles_left} 場。")
+
+        if int(getattr(run, "stone_skin_potion_battles_left", 0)) > 0:
+            run.stone_skin_potion_battles_left = max(0, int(getattr(run, "stone_skin_potion_battles_left", 0)) - 1)
+            if hasattr(c, "gain_shield"):
+                c.gain_shield(10)
+            c.log.append(f"石膚藥劑作用中：戰鬥開始獲得 10 點護盾。剩餘 {run.stone_skin_potion_battles_left} 場。")
+
+        if int(getattr(run, "rage_potion_battles_left", 0)) > 0:
+            run.rage_potion_battles_left = max(0, int(getattr(run, "rage_potion_battles_left", 0)) - 1)
+            c.potion_damage_bonus_percent += 50
+            c.log.append(f"憤怒藥劑作用中：造成傷害 +50%。剩餘 {run.rage_potion_battles_left} 場。")
+
+        if int(getattr(run, "resistance_potion_battles_left", 0)) > 0:
+            run.resistance_potion_battles_left = max(0, int(getattr(run, "resistance_potion_battles_left", 0)) - 1)
+            c.potion_damage_taken_reduction_percent += 25
+            c.log.append(f"抗擊藥劑作用中：受到傷害 -25%。剩餘 {run.resistance_potion_battles_left} 場。")
+
+        if int(getattr(run, "regen_potion_turns_left", 0)) > 0:
+            c.potion_regen_turns_left = int(getattr(run, "regen_potion_turns_left", 0))
+            c.potion_regen_amount = max(1, int(getattr(run, "regen_potion_amount", 10)))
+            run.regen_potion_turns_left = 0
+            c.log.append(f"再生劑作用中：剩餘 {c.potion_regen_turns_left} 回合，每回合回復 {c.potion_regen_amount} HP。")
 
     def start_combat(enemy: Enemy, reward_tier: Optional[str] = None) -> None:
         nonlocal combat_scene, scene, pending_combat_reward_tier
@@ -1701,6 +2386,7 @@ def main() -> None:
         if hasattr(c, "gold"):
             c.gold = run.gold
         c.start(combat_enemy)
+        apply_potion_battle_buffs(c, combat_enemy)
         c.sigils = [s for s in sigils_all if s.sigil_id in run.equipped_sigils]
         if hasattr(c, "refresh_sigil_state"):
             c.refresh_sigil_state()
@@ -1715,20 +2401,36 @@ def main() -> None:
         run.hp = combat_scene.combat.player_hp
         if hasattr(combat_scene.combat, "gold"):
             run.gold = combat_scene.combat.gold
+        if hasattr(combat_scene.combat, "potion_regen_turns_left"):
+            run.regen_potion_turns_left = int(getattr(combat_scene.combat, "potion_regen_turns_left", 0))
+            run.regen_potion_amount = int(getattr(combat_scene.combat, "potion_regen_amount", getattr(run, "regen_potion_amount", 10)))
+
         node = run.map_graph.nodes[run.current_node_id]
         is_training = enemy is not None and getattr(enemy, "enemy_id", "") == "training_dummy"
         if (not is_training) and enemy and enemy.hp <= 0:
             node.cleared = True
+            base_reward = 0
             if pending_combat_reward_tier == "normal":
-                run.gold += 20
+                base_reward = 20
             elif pending_combat_reward_tier == "elite":
-                run.gold += 40
+                base_reward = 40
             elif node.node_type == NodeType.COMBAT:
-                run.gold += 20
+                base_reward = 20
             elif node.node_type == NodeType.ELITE:
-                run.gold += 40
+                base_reward = 40
             elif node.node_type == NodeType.BOSS:
-                run.gold += 100
+                base_reward = 100
+
+            reward = base_reward
+            gold_bonus_percent = max(0, int(getattr(combat_scene.combat, "potion_gold_bonus_percent", 0)))
+            if base_reward > 0 and gold_bonus_percent > 0:
+                reward += int(round(base_reward * gold_bonus_percent / 100.0))
+            run.gold += reward
+            if reward > 0:
+                if gold_bonus_percent > 0:
+                    map_scene.msg = f"戰鬥勝利：獲得 {reward} 金幣（貪婪藥水加成）。"
+                else:
+                    map_scene.msg = f"戰鬥勝利：獲得 {reward} 金幣。"
         pending_combat_reward_tier = None
         combat_scene = None
         scene = "map"
@@ -1945,7 +2647,7 @@ def main() -> None:
                 run,
                 pending_sigil_choice_choices,
                 "起始祝福",
-                "鮮血完成了祭禮。現在，從三枚隨機紋章中選擇一枚作為開局力量。",
+                "你用小刀劃破了手腕，鮮血汩汩流出，在祭壇上沿著鐫刻精美的凹槽流淌，你發現這些紅色的線條形成了一個六角星的圖騰，似乎在召喚著什麼力量。當最後一滴血落下，圖騰發出微弱的光芒，三枚紋章緩緩浮現，懸停在空中，等待你的選擇。",
                 font,
                 font_big,
             )
@@ -2037,7 +2739,14 @@ def main() -> None:
             if event.type == pygame.VIDEORESIZE and not fullscreen:
                 screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
 
-            if scene == "map":
+            if scene == "opening":
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if opening_scene.handle_click(event.pos, sw, sh):
+                        run.current_node_id = run.map_graph.start_id
+                        start_scene = StartScene(run, choose_start_options(), font, font_big)
+                        scene = "start"
+
+            elif scene == "map":
                 action = map_scene.handle_event(event, sw, sh)
                 if action == "consume":
                     continue
@@ -2131,8 +2840,12 @@ def main() -> None:
 
         if scene == "combat" and combat_scene is not None:
             combat_scene.update(dt_ms)
+        if scene == "start" and start_scene is not None:
+            start_scene.update(dt_ms)
 
-        if scene == "map":
+        if scene == "opening":
+            opening_scene.render(screen, sw, sh)
+        elif scene == "map":
             map_scene.render(screen, sw, sh)
         elif scene == "shop":
             if shop_scene is None:

@@ -15,6 +15,14 @@ class RunState:
     unlocked_slots: int = 1
     owned_sigils: Set[str] = field(default_factory=set)
     equipped_sigils: List[str] = field(default_factory=list)
+    sigil_slot_buy_count: int = 0
+
+    greed_potion_battles_left: int = 0
+    stone_skin_potion_battles_left: int = 0
+    rage_potion_battles_left: int = 0
+    resistance_potion_battles_left: int = 0
+    regen_potion_turns_left: int = 0
+    regen_potion_amount: int = 10
 
     map_counts: List[int] = field(default_factory=lambda: [1, 2, 3, 3, 2, 1])
     map_graph: MapGraph = field(default_factory=lambda: generate_map([1, 2, 3, 3, 2, 1]))
