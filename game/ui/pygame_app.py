@@ -28,6 +28,10 @@ CARD_W, CARD_H = 100, 140
 HAND_GAP = 12
 ICON_BASE = 36
 ICON_SIZE = ICON_BASE * 2
+TOP_ICON_SIZE = ICON_SIZE
+TOP_ICON_TOP = 18
+TOP_ICON_RIGHT_MARGIN = 30
+TOP_ICON_GAP = 12
 SPECIAL_MAP_ICON_SCALE = 2.5
 ASSETS_DIR = Path(__file__).resolve().parent / "assets"
 
@@ -521,8 +525,8 @@ class MapScene:
         self.scroll_y = 0
         self.scroll_speed = 70
         self._initial_scroll_done = False
-        self._btn_equip = Button(pygame.Rect(0, 0, 160, 46), "裝備紋章")
-        self._btn_training = Button(pygame.Rect(0, 0, 160, 46), "進入訓練場")
+        self._btn_equip = Button(pygame.Rect(0, 0, TOP_ICON_SIZE, TOP_ICON_SIZE), "裝備紋章")
+        self._btn_training = Button(pygame.Rect(0, 0, TOP_ICON_SIZE, TOP_ICON_SIZE), "進入訓練場")
 
     def _map_view_rect(self, sw: int, sh: int) -> pygame.Rect:
         return pygame.Rect(30, 90, sw - 20, sh - 140)
@@ -643,6 +647,79 @@ class MapScene:
     def _equip_panel_rect(self, sw: int, sh: int) -> pygame.Rect:
         return pygame.Rect(sw - 360, 80, 330, sh - 120)
 
+    def _layout_top_icon_buttons(self, sw: int) -> None:
+        y = TOP_ICON_TOP
+        size = TOP_ICON_SIZE
+        self._btn_training.rect = pygame.Rect(
+            sw - TOP_ICON_RIGHT_MARGIN - size,
+            y,
+            size,
+            size,
+        )
+        self._btn_equip.rect = pygame.Rect(
+            self._btn_training.rect.x - TOP_ICON_GAP - size,
+            y,
+            size,
+            size,
+        )
+
+    def _draw_top_icon_button(
+        self,
+        screen: pygame.Surface,
+        rect: pygame.Rect,
+        icon_name: str,
+        fallback_text: str,
+        hovered: bool,
+    ) -> None:
+        if hovered:
+            _draw_glow(screen, rect.center, rect.w, (255, 236, 164), 54)
+            _draw_glow(screen, rect.center, max(1, rect.w // 2), (255, 250, 210), 64)
+
+        shadow = pygame.Surface((rect.w + 8, rect.h + 8), pygame.SRCALPHA)
+        pygame.draw.rect(shadow, (0, 0, 0, 95), shadow.get_rect(), border_radius=12)
+        screen.blit(shadow, (rect.x - 4, rect.y - 4))
+
+        frame = pygame.Surface(rect.size, pygame.SRCALPHA)
+        pygame.draw.rect(frame, (18, 18, 22, 145), frame.get_rect(), border_radius=10)
+        screen.blit(frame, rect.topleft)
+
+        icon = _load_image("ui", icon_name, size=(rect.w, rect.h))
+        if icon is not None:
+            screen.blit(icon, rect.topleft)
+        else:
+            pygame.draw.rect(screen, (42, 42, 48), rect, border_radius=10)
+            _blit_text_outline(
+                screen,
+                self.font,
+                fallback_text,
+                rect.center,
+                fg=(245, 230, 180),
+                outline=(12, 12, 14),
+                center=True,
+            )
+
+        if hovered:
+            pygame.draw.rect(screen, (255, 236, 164), rect.inflate(6, 6), width=3, border_radius=12)
+            pygame.draw.rect(screen, (255, 250, 210), rect.inflate(2, 2), width=1, border_radius=10)
+
+    def _draw_top_icon_buttons(self, screen: pygame.Surface, sw: int) -> None:
+        self._layout_top_icon_buttons(sw)
+        mouse_pos = pygame.mouse.get_pos()
+        self._draw_top_icon_button(
+            screen,
+            self._btn_equip.rect,
+            "sigils.png",
+            "紋章",
+            self._btn_equip.hit(mouse_pos),
+        )
+        self._draw_top_icon_button(
+            screen,
+            self._btn_training.rect,
+            "dummy.png",
+            "訓練",
+            self._btn_training.hit(mouse_pos),
+        )
+
     def _draw_sigil_tooltip(
         self,
         screen: pygame.Surface,
@@ -706,8 +783,7 @@ class MapScene:
         if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
             return None
         pos = event.pos
-        self._btn_equip.rect.topleft = (sw - 350, 20)
-        self._btn_training.rect.topleft = (sw - 180, 20)
+        self._layout_top_icon_buttons(sw)
         if self._btn_equip.hit(pos):
             self.show_equip_panel = not self.show_equip_panel
             return "consume"
@@ -752,10 +828,7 @@ class MapScene:
             outline=(20, 20, 20),
         )
 
-        self._btn_equip.rect.topleft = (sw - 350, 20)
-        self._btn_training.rect.topleft = (sw - 180, 20)
-        self._btn_equip.draw(screen, self.font, True)
-        self._btn_training.draw(screen, self.font, True)
+        self._draw_top_icon_buttons(screen, sw)
 
         view_rect = self._map_view_rect(sw, sh)
         if not self._initial_scroll_done:
@@ -1288,10 +1361,8 @@ class ShopScene:
 
         return None
 
-
 class OpeningScene:
-    def __init__(self, font: pygame.font.Font, font_big: pygame.font.Font, font_huge: pygame.font.Font) -> None:
-        self.font = font
+    def __init__(self, font_big: pygame.font.Font, font_huge: pygame.font.Font) -> None:
         self.font_big = font_big
         self.font_huge = font_huge
         self.start_label = "遊戲開始"
@@ -1368,6 +1439,7 @@ class OpeningScene:
             outline=(15, 9, 6),
             center=True,
         )
+
 
 class StartScene:
     def __init__(self, run: RunState, options: List[Dict[str, Any]], font: pygame.font.Font, font_big: pygame.font.Font) -> None:
@@ -1447,13 +1519,13 @@ class StartScene:
         _blit_text_outline(
             overlay,
             self.font_big,
-            "雕像的輕語",
+            "惡魔之爪的低語",
             (70, title_y),
             fg=(255, 214, 150),
             outline=(15, 9, 8),
         )
 
-        description = "雕像的眼角有一些早已乾涸凝固的血跡，像是從它的眼裡流出的。一個彷彿嘶吼而又尖銳的聲音撕開了沉寂，它要你做一個再簡單不過的選擇。"
+        description = "一道漆黑的爪痕浮現在地面上。它沒有命令你前進，只是靜靜地提出交易。選擇一項祝福，然後開始這趟旅程。"
         y = title_y + 52
         for line in _wrap_text(self.font, description, sw - 140):
             _blit_text_outline(
@@ -1544,6 +1616,358 @@ class StartScene:
                     return None
                 return option
         return None
+
+
+class StartRewardScene:
+    def __init__(
+        self,
+        run: RunState,
+        option: Dict[str, Any],
+        all_sigils: List[Sigil],
+        font: pygame.font.Font,
+        font_big: pygame.font.Font,
+    ) -> None:
+        self.run = run
+        self.option = deepcopy(option)
+        self.all_sigils = all_sigils
+        self.font = font
+        self.font_big = font_big
+        self.elapsed_ms = 0
+        self.damage_delay_ms = 500
+        self.damage_done = False
+        self.flash_ms = 0
+        self.shake_ms = 0
+        self.msg = ""
+        self.icon_rect = pygame.Rect(0, 0, 96, 96)
+        self.continue_rect = pygame.Rect(0, 0, 0, 0)
+        self.sigil_buttons: List[Tuple[Sigil, pygame.Rect]] = []
+        self.hp_loss = self._direct_hp_loss()
+        self.sigil_choice_amount = self._sigil_choice_amount()
+        self.sigil_choices = self._roll_sigil_choices()
+        self.sigil_choice_description = (
+            "你用小刀劃破了手腕，鮮血汩汩流出，在祭壇上沿著鐫刻精美的凹槽流淌，"
+            "你發現這些紅色的線條形成了一個六角星的圖騰，似乎在召喚著什麼力量。"
+            "當最後一滴血落下，圖騰發出微弱的光芒，三枚紋章緩緩浮現，懸停在空中，等待你的選擇。"
+        )
+
+    def _effects(self) -> List[Dict[str, Any]]:
+        return [e for e in self.option.get("effects", []) if isinstance(e, dict)]
+
+    def _direct_hp_loss(self) -> int:
+        total = 0
+        for effect in self._effects():
+            if str(effect.get("type", "")) == "lose_hp":
+                total += max(0, int(effect.get("amount", 0)))
+        return total
+
+    def _sigil_choice_amount(self) -> int:
+        amount = 0
+        for effect in self._effects():
+            if str(effect.get("type", "")) == "choose_random_sigil":
+                amount = max(amount, max(1, int(effect.get("amount", 1))))
+        return amount
+
+    def _is_sigil_choice_scene(self) -> bool:
+        return self.sigil_choice_amount > 0
+
+    def _roll_sigil_choices(self) -> List[Sigil]:
+        if self.sigil_choice_amount <= 0:
+            return []
+        available = [s for s in self.all_sigils if s.sigil_id not in self.run.owned_sigils]
+        if not available:
+            return []
+        return sample(available, min(self.sigil_choice_amount, len(available)))
+
+    def option_without_direct_hp_loss(self) -> Dict[str, Any]:
+        cleaned = deepcopy(self.option)
+        cleaned["effects"] = [
+            e for e in cleaned.get("effects", [])
+            if not (isinstance(e, dict) and str(e.get("type", "")) == "lose_hp")
+        ]
+        return cleaned
+
+    def option_for_picked_sigil(self, sigil: Sigil) -> Dict[str, Any]:
+        cleaned = deepcopy(self.option)
+        kept_effects: List[Dict[str, Any]] = []
+        for effect in cleaned.get("effects", []):
+            if not isinstance(effect, dict):
+                continue
+            effect_type = str(effect.get("type", ""))
+            if effect_type in {"lose_hp", "choose_random_sigil"}:
+                continue
+            kept_effects.append(effect)
+        kept_effects.append({
+            "type": "gain_specific_sigil",
+            "sigil_id": sigil.sigil_id,
+            "name": sigil.name,
+        })
+        cleaned["effects"] = kept_effects
+        return cleaned
+
+    def option_for_no_sigil_available(self) -> Dict[str, Any]:
+        cleaned = deepcopy(self.option)
+        kept_effects: List[Dict[str, Any]] = []
+        for effect in cleaned.get("effects", []):
+            if not isinstance(effect, dict):
+                continue
+            effect_type = str(effect.get("type", ""))
+            if effect_type in {"lose_hp", "choose_random_sigil"}:
+                continue
+            kept_effects.append(effect)
+        kept_effects.append({"type": "gain_gold", "amount": 30})
+        cleaned["effects"] = kept_effects
+        return cleaned
+
+    def _icon_filename(self) -> str:
+        label_text = f"{self.option.get('label', '')} {self.option.get('text', '')}".lower()
+        effects = self._effects()
+        effect_types = {str(e.get("type", "")) for e in effects}
+        if "gain_gold" in effect_types or "gold" in label_text or "金幣" in label_text:
+            return "cash_bag.png"
+        if (
+            "choose_random_sigil" in effect_types
+            or "gain_random_sigil" in effect_types
+            or "gain_sigil" in effect_types
+            or "sigil" in label_text
+            or "紋章" in label_text
+            or "文章" in label_text
+        ):
+            return "sigil.png"
+        if "gain_sigil_slot" in effect_types or "插槽" in label_text:
+            return "sigil_slot.png"
+        if "heal" in effect_types or "hp" in label_text or "生命" in label_text:
+            return "heart.png"
+        return "claw.png"
+
+    def update(self, dt_ms: int) -> None:
+        self.elapsed_ms += max(0, int(dt_ms))
+        self.flash_ms = max(0, self.flash_ms - max(0, int(dt_ms)))
+        self.shake_ms = max(0, self.shake_ms - max(0, int(dt_ms)))
+        if self.hp_loss > 0 and not self.damage_done and self.elapsed_ms >= self.damage_delay_ms:
+            self.run.hp = max(1, self.run.hp - self.hp_loss)
+            self.damage_done = True
+            self.flash_ms = 180
+            self.shake_ms = 260
+
+    def _shake_offset(self) -> Tuple[int, int]:
+        if self.shake_ms <= 0:
+            return (0, 0)
+        strength = 8
+        t = self.elapsed_ms // 24
+        x = ((t * 37) % (strength * 2 + 1)) - strength
+        y = ((t * 53) % (strength * 2 + 1)) - strength
+        return int(x), int(y)
+
+    def _load_background(self, sw: int, sh: int) -> Optional[pygame.Surface]:
+        for filename in ("startroom_second_bg.png", "startroom_reward_bg.png", "startroom_bg.png", "start_bg.png"):
+            bg = _load_image("backgrounds", filename, size=(sw, sh))
+            if bg is not None:
+                return bg
+        return None
+
+    def _draw_sigil_choice_content(self, screen: pygame.Surface, sw: int, sh: int) -> None:
+        content_x = sw // 2
+        content_w = max(360, sw - content_x - 54)
+        title_y = 86
+
+        header = pygame.Surface((content_w, 146), pygame.SRCALPHA)
+        pygame.draw.rect(header, (0, 0, 0, 128), header.get_rect(), border_radius=16)
+        pygame.draw.rect(header, (255, 230, 170, 95), header.get_rect(), width=2, border_radius=16)
+        screen.blit(header, (content_x, title_y))
+
+        _blit_text_outline(
+            screen,
+            self.font_big,
+            "選擇一枚紋章",
+            (content_x + 22, title_y + 16),
+            fg=(255, 226, 170),
+            outline=(8, 6, 6),
+        )
+
+        y = title_y + 58
+        for line in _wrap_text(self.font, self.sigil_choice_description, content_w - 44)[:3]:
+            _blit_text_outline(
+                screen,
+                self.font,
+                line,
+                (content_x + 22, y),
+                fg=(240, 235, 220),
+                outline=(0, 0, 0),
+            )
+            y += 26
+
+        self.sigil_buttons = []
+        mouse_pos = pygame.mouse.get_pos()
+        card_x = content_x
+        card_y = title_y + 168
+        card_w = content_w
+        card_h = 104
+        gap = 16
+
+        if not self.sigil_choices:
+            self.continue_rect = pygame.Rect(card_x, card_y, card_w, 92)
+            no_sigil_surf = pygame.Surface(self.continue_rect.size, pygame.SRCALPHA)
+            pygame.draw.rect(no_sigil_surf, (0, 0, 0, 128), no_sigil_surf.get_rect(), border_radius=14)
+            pygame.draw.rect(no_sigil_surf, (255, 230, 170, 105), no_sigil_surf.get_rect(), width=2, border_radius=14)
+            screen.blit(no_sigil_surf, self.continue_rect.topleft)
+            _blit_text_outline(
+                screen,
+                self.font,
+                "目前沒有可選擇的新紋章。點擊此處繼續，改獲得 30 金幣。",
+                (self.continue_rect.x + 20, self.continue_rect.y + 32),
+                fg=(240, 235, 220),
+                outline=(0, 0, 0),
+            )
+            return
+
+        for idx, sigil in enumerate(self.sigil_choices, start=1):
+            r = pygame.Rect(card_x, card_y, card_w, card_h)
+            hovered = r.collidepoint(mouse_pos)
+            if hovered:
+                _draw_glow(screen, r.center, 78, (255, 236, 164), 42)
+
+            card_surf = pygame.Surface(r.size, pygame.SRCALPHA)
+            pygame.draw.rect(card_surf, (0, 0, 0, 128), card_surf.get_rect(), border_radius=14)
+            border_color = (255, 236, 164, 210) if hovered else (255, 230, 170, 92)
+            pygame.draw.rect(card_surf, border_color, card_surf.get_rect(), width=2, border_radius=14)
+            screen.blit(card_surf, r.topleft)
+            self.sigil_buttons.append((sigil, r))
+
+            icon = _load_image("sigils", f"{sigil.sigil_id}.png", size=(56, 56))
+            if icon is not None:
+                screen.blit(icon, (r.x + 18, r.y + 24))
+            else:
+                pygame.draw.circle(screen, (130, 90, 180), (r.x + 46, r.y + 52), 26)
+                pygame.draw.circle(screen, (255, 230, 170), (r.x + 46, r.y + 52), 26, 2)
+
+            _blit_text_outline(
+                screen,
+                self.font_big,
+                f"{idx}. {sigil.name}",
+                (r.x + 92, r.y + 12),
+                fg=_sigil_name_color(sigil),
+                outline=(0, 0, 0),
+            )
+            desc = str(getattr(sigil, "desc", ""))
+            for line_i, line in enumerate(_wrap_text(self.font, desc, r.w - 116)[:2]):
+                _blit_text_outline(
+                    screen,
+                    self.font,
+                    line,
+                    (r.x + 92, r.y + 52 + line_i * 22),
+                    fg=(235, 235, 235),
+                    outline=(0, 0, 0),
+                )
+            card_y += card_h + gap
+
+    def _draw_icon_reward_content(self, screen: pygame.Surface, sw: int, sh: int) -> None:
+        title = str(self.option.get("label", "起始祝福"))
+        text = str(self.option.get("text", ""))
+        _blit_text_outline(
+            screen,
+            self.font_big,
+            title,
+            (sw // 2, int(sh * 0.22)),
+            fg=(255, 226, 170),
+            outline=(15, 8, 8),
+            center=True,
+        )
+        y = int(sh * 0.29)
+        for line in _wrap_text(self.font, text, min(760, sw - 160))[:3]:
+            _blit_text_outline(
+                screen,
+                self.font,
+                line,
+                (sw // 2, y),
+                fg=(240, 235, 220),
+                outline=(8, 8, 8),
+                center=True,
+            )
+            y += 27
+
+        icon_size = 96
+        self.icon_rect = pygame.Rect(0, 0, icon_size, icon_size)
+        self.icon_rect.center = (sw // 2, int(sh * 0.54))
+        hovered = self.icon_rect.collidepoint(pygame.mouse.get_pos())
+
+        if hovered:
+            _draw_glow(screen, self.icon_rect.center, 86, (255, 255, 255), 42)
+
+        icon = _load_image("ui", self._icon_filename(), size=(icon_size, icon_size))
+        if icon is not None:
+            screen.blit(icon, self.icon_rect.topleft)
+        else:
+            fallback = pygame.Surface((icon_size, icon_size), pygame.SRCALPHA)
+            pygame.draw.rect(fallback, (20, 20, 24, 180), fallback.get_rect(), border_radius=14)
+            pygame.draw.rect(fallback, (255, 255, 255, 95), fallback.get_rect(), width=2, border_radius=14)
+            screen.blit(fallback, self.icon_rect.topleft)
+            _blit_text_outline(screen, self.font, "祝福", self.icon_rect.center, fg=(245, 230, 180), outline=(0, 0, 0), center=True)
+
+        if hovered:
+            pygame.draw.rect(screen, (255, 255, 255), self.icon_rect.inflate(8, 8), width=3, border_radius=14)
+            pygame.draw.rect(screen, (255, 255, 255), self.icon_rect.inflate(2, 2), width=1, border_radius=12)
+
+        hint = "點擊圖示繼續"
+        if self.hp_loss > 0 and not self.damage_done:
+            hint = "承受代價中……"
+        _blit_text_outline(
+            screen,
+            self.font,
+            hint,
+            (sw // 2, int(sh * 0.72)),
+            fg=(235, 235, 235),
+            outline=(8, 8, 8),
+            center=True,
+        )
+
+    def _draw_scene_content(self, screen: pygame.Surface, sw: int, sh: int) -> None:
+        bg = self._load_background(sw, sh)
+        if bg is not None:
+            screen.blit(bg, (0, 0))
+        else:
+            screen.fill((18, 14, 18))
+            _draw_glow(screen, (sw // 2, sh // 2), 260, (95, 35, 35), 50)
+
+        dim = pygame.Surface((sw, sh), pygame.SRCALPHA)
+        dim.fill((0, 0, 0, 45))
+        screen.blit(dim, (0, 0))
+
+        if self._is_sigil_choice_scene():
+            self._draw_sigil_choice_content(screen, sw, sh)
+        else:
+            self._draw_icon_reward_content(screen, sw, sh)
+
+        if self.flash_ms > 0:
+            alpha = max(0, min(150, int(150 * self.flash_ms / 180)))
+            flash = pygame.Surface((sw, sh), pygame.SRCALPHA)
+            flash.fill((255, 30, 30, alpha))
+            screen.blit(flash, (0, 0))
+
+    def render(self, screen: pygame.Surface, sw: int, sh: int) -> None:
+        if self.shake_ms > 0:
+            temp = pygame.Surface((sw, sh), pygame.SRCALPHA)
+            self._draw_scene_content(temp, sw, sh)
+            screen.fill((0, 0, 0))
+            screen.blit(temp, self._shake_offset())
+        else:
+            self._draw_scene_content(screen, sw, sh)
+
+    def handle_click(self, pos: Tuple[int, int]) -> Optional[Dict[str, Any]]:
+        if self.hp_loss > 0 and not self.damage_done:
+            return None
+
+        if self._is_sigil_choice_scene():
+            for sigil, rect in self.sigil_buttons:
+                if rect.collidepoint(pos):
+                    return self.option_for_picked_sigil(sigil)
+            if not self.sigil_choices and self.continue_rect.collidepoint(pos):
+                return self.option_for_no_sigil_available()
+            return None
+
+        if self.icon_rect.collidepoint(pos):
+            return self.option_without_direct_hp_loss()
+        return None
+
 
 class EventScene:
     def __init__(self, run: RunState, event_data: Dict[str, Any], font: pygame.font.Font, font_big: pygame.font.Font) -> None:
@@ -1979,18 +2403,18 @@ class CombatScene:
         progress = min(1.0, age / duration)
         alpha = max(0, min(255, int(255 * (1.0 - progress))))
         x = int(fx.get("x", 0))
-        y = int(fx.get("y", 0))
+        y = int(fx.get("y", 0)) + 44
 
-        surf = pygame.Surface((220, 150), pygame.SRCALPHA)
+        surf = pygame.Surface((340, 240), pygame.SRCALPHA)
         white = (255, 255, 255, alpha)
         red = (230, 30, 35, max(0, int(alpha * 0.85)))
-        glow = (255, 80, 80, max(0, int(alpha * 0.28)))
+        glow = (255, 80, 80, max(0, int(alpha * 0.30)))
 
-        offset = int(progress * 18)
-        pygame.draw.line(surf, glow, (28 + offset, 22), (188 + offset, 118), 18)
-        pygame.draw.line(surf, red, (35 + offset, 28), (181 + offset, 112), 9)
-        pygame.draw.line(surf, white, (42 + offset, 35), (172 + offset, 105), 4)
-        pygame.draw.line(surf, (255, 255, 255, max(0, int(alpha * 0.7))), (75 + offset, 28), (182 + offset, 82), 3)
+        offset = int(progress * 26)
+        pygame.draw.line(surf, glow, (42 + offset, 34), (302 + offset, 194), 30)
+        pygame.draw.line(surf, red, (52 + offset, 44), (290 + offset, 184), 15)
+        pygame.draw.line(surf, white, (64 + offset, 56), (276 + offset, 170), 7)
+        pygame.draw.line(surf, (255, 255, 255, max(0, int(alpha * 0.72))), (118 + offset, 45), (294 + offset, 132), 5)
 
         screen.blit(surf, surf.get_rect(center=(x, y)))
 
@@ -2056,13 +2480,20 @@ class CombatScene:
         if self.screen_shake_ms > 0:
             screen = pygame.Surface((sw, sh), pygame.SRCALPHA)
 
-        bg = _load_image("backgrounds", "combat_bg.png", size=(sw, sh))
-        if bg is not None:
-            screen.blit(bg, (0, 0))
-        else:
-            screen.fill((245, 246, 250))
-
         enemy = self.combat.enemy
+        combat_scene_bg = None
+        if enemy is not None:
+            combat_scene_bg = _load_image("combat_scenes", f"{enemy.enemy_id}.png", size=(sw, sh))
+
+        if combat_scene_bg is not None:
+            screen.blit(combat_scene_bg, (0, 0))
+        else:
+            bg = _load_image("backgrounds", "combat_bg.png", size=(sw, sh))
+            if bg is not None:
+                screen.blit(bg, (0, 0))
+            else:
+                screen.fill((245, 246, 250))
+
         if enemy is None:
             if screen is not target_screen:
                 target_screen.fill((20, 20, 20))
@@ -2074,12 +2505,13 @@ class CombatScene:
         self._enemy_fx_center = portrait_box.center
         self._player_fx_center = (160, 130)
 
-        portrait = _load_image("enemies", f"{enemy.enemy_id}.png")
-        if portrait is not None:
-            fitted = _fit_surface_keep_ratio(portrait, (portrait_box.w, portrait_box.h))
-            screen.blit(fitted, fitted.get_rect(center=portrait_box.center))
-        else:
-            pygame.draw.rect(screen, (220, 220, 225), portrait_box, border_radius=16)
+        if combat_scene_bg is None:
+            portrait = _load_image("enemies", f"{enemy.enemy_id}.png")
+            if portrait is not None:
+                fitted = _fit_surface_keep_ratio(portrait, (portrait_box.w, portrait_box.h))
+                screen.blit(fitted, fitted.get_rect(center=portrait_box.center))
+            else:
+                pygame.draw.rect(screen, (220, 220, 225), portrait_box, border_radius=16)
 
         if self.enemy_flash_ms > 0:
             flash_alpha = max(0, min(180, int(180 * self.enemy_flash_ms / 120)))
@@ -2087,7 +2519,8 @@ class CombatScene:
             flash.fill((255, 255, 255, flash_alpha))
             screen.blit(flash, portrait_box.topleft)
 
-        pygame.draw.rect(screen, (30, 30, 30), portrait_box, width=2, border_radius=16)
+        if combat_scene_bg is None:
+            pygame.draw.rect(screen, (30, 30, 30), portrait_box, width=2, border_radius=16)
         self._render_effects(screen)
 
         hand_y = sh - CARD_H - 30
@@ -2318,17 +2751,25 @@ def main() -> None:
     windowed_size = (w, h)
 
     scene = "opening"
-    opening_scene = OpeningScene(font, font_big, font_huge)
+    opening_scene = OpeningScene(font_big, font_huge)
     map_scene = MapScene(run, font, font_big)
     shop_scene: Optional[ShopScene] = None
     combat_scene: Optional[CombatScene] = None
     event_scene: Optional[EventScene] = None
     start_scene: Optional[StartScene] = None
+    start_reward_scene: Optional[StartRewardScene] = None
     sigil_choice_scene: Optional[SigilChoiceScene] = None
     pending_combat_reward_tier: Optional[str] = None
     pending_sigil_choice_choices: List[Sigil] = []
     pending_sigil_choice_source: Optional[str] = None
     pending_sigil_choice_messages: List[str] = []
+
+    opening_transition_active = False
+    opening_transition_elapsed_ms = 0
+    opening_transition_fade_out_ms = 400
+    opening_transition_hold_ms = 500
+    opening_transition_fade_in_ms = 400
+    opening_transition_start_scene_created = False
 
     def apply_potion_battle_buffs(c: CombatState, combat_enemy: Enemy) -> None:
         if getattr(combat_enemy, "enemy_id", "") == "training_dummy":
@@ -2520,6 +2961,18 @@ def main() -> None:
                 gained = run.unlocked_slots - before
                 messages.append(f"紋章插槽 +{gained}" if gained > 0 else "紋章插槽已達上限")
 
+            elif effect_type == "gain_specific_sigil":
+                sigil_id = str(effect.get("sigil_id", ""))
+                sigil = next((s for s in sigils_all if s.sigil_id == sigil_id), None)
+                if sigil is None:
+                    messages.append("紋章力量消散了")
+                elif sigil.sigil_id in run.owned_sigils:
+                    run.gold += 30
+                    messages.append(f"已擁有紋章「{sigil.name}」，改獲得 30 金幣")
+                else:
+                    run.owned_sigils.add(sigil.sigil_id)
+                    messages.append(f"獲得紋章：「{sigil.name}」")
+
             elif effect_type == "gain_random_sigil":
                 gained_names: List[str] = []
                 for _ in range(max(1, amount)):
@@ -2630,7 +3083,7 @@ def main() -> None:
         map_scene.msg = "事件完成" if not messages else "事件完成：" + "；".join(messages)
 
     def apply_start_option(option: Dict[str, Any]) -> None:
-        nonlocal scene, shop_scene, start_scene, sigil_choice_scene, pending_sigil_choice_source, pending_sigil_choice_messages
+        nonlocal scene, shop_scene, start_scene, start_reward_scene, sigil_choice_scene, pending_sigil_choice_source, pending_sigil_choice_messages
         messages: List[str] = []
         action = apply_event_effects(
             [effect for effect in option.get("effects", []) if isinstance(effect, dict)],
@@ -2639,6 +3092,7 @@ def main() -> None:
         node = run.map_graph.nodes[run.current_node_id]
 
         start_scene = None
+        start_reward_scene = None
 
         if action == "choose_sigil":
             pending_sigil_choice_source = "start"
@@ -2739,12 +3193,15 @@ def main() -> None:
             if event.type == pygame.VIDEORESIZE and not fullscreen:
                 screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
 
+            if opening_transition_active:
+                continue
+
             if scene == "opening":
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if opening_scene.handle_click(event.pos, sw, sh):
-                        run.current_node_id = run.map_graph.start_id
-                        start_scene = StartScene(run, choose_start_options(), font, font_big)
-                        scene = "start"
+                        opening_transition_active = True
+                        opening_transition_elapsed_ms = 0
+                        opening_transition_start_scene_created = False
 
             elif scene == "map":
                 action = map_scene.handle_event(event, sw, sh)
@@ -2809,6 +3266,18 @@ def main() -> None:
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     option = start_scene.handle_click(event.pos)
                     if option is not None:
+                        start_reward_scene = StartRewardScene(run, option, sigils_all, font, font_big)
+                        start_scene = None
+                        scene = "start_reward"
+
+            elif scene == "start_reward":
+                if start_reward_scene is None:
+                    scene = "map"
+                    continue
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    option = start_reward_scene.handle_click(event.pos)
+                    if option is not None:
+                        start_reward_scene = None
                         apply_start_option(option)
 
             elif scene == "event":
@@ -2838,10 +3307,32 @@ def main() -> None:
 
         dt_ms = clock.tick(60)
 
+        if opening_transition_active:
+            opening_transition_elapsed_ms += dt_ms
+            opening_transition_switch_ms = opening_transition_fade_out_ms + opening_transition_hold_ms
+            opening_transition_total_ms = opening_transition_switch_ms + opening_transition_fade_in_ms
+
+            if (
+                not opening_transition_start_scene_created
+                and opening_transition_elapsed_ms >= opening_transition_switch_ms
+            ):
+                start_scene = StartScene(run, choose_start_options(), font, font_big)
+                scene = "start"
+                opening_transition_start_scene_created = True
+
+            if opening_transition_elapsed_ms >= opening_transition_total_ms:
+                if not opening_transition_start_scene_created:
+                    start_scene = StartScene(run, choose_start_options(), font, font_big)
+                    scene = "start"
+                    opening_transition_start_scene_created = True
+                opening_transition_active = False
+
         if scene == "combat" and combat_scene is not None:
             combat_scene.update(dt_ms)
-        if scene == "start" and start_scene is not None:
+        if scene == "start" and start_scene is not None and not opening_transition_active:
             start_scene.update(dt_ms)
+        if scene == "start_reward" and start_reward_scene is not None:
+            start_reward_scene.update(dt_ms)
 
         if scene == "opening":
             opening_scene.render(screen, sw, sh)
@@ -2858,6 +3349,13 @@ def main() -> None:
             else:
                 start_scene.render(screen, sw, sh)
 
+        elif scene == "start_reward":
+            if start_reward_scene is None:
+                scene = "map"
+                map_scene.render(screen, sw, sh)
+            else:
+                start_reward_scene.render(screen, sw, sh)
+
         elif scene == "event":
             if event_scene is None:
                 scene = "map"
@@ -2872,6 +3370,25 @@ def main() -> None:
                 sigil_choice_scene.render(screen, sw, sh)
         elif scene == "combat" and combat_scene is not None:
             combat_scene.render(screen, sw, sh)
+
+        if opening_transition_active:
+            opening_transition_switch_ms = opening_transition_fade_out_ms + opening_transition_hold_ms
+            opening_transition_total_ms = opening_transition_switch_ms + opening_transition_fade_in_ms
+            if opening_transition_elapsed_ms < opening_transition_fade_out_ms:
+                fade_progress = opening_transition_elapsed_ms / max(1, opening_transition_fade_out_ms)
+                fade_alpha = int(255 * clamp_float(fade_progress, 0.0, 1.0))
+            elif opening_transition_elapsed_ms < opening_transition_switch_ms:
+                fade_alpha = 255
+            else:
+                fade_progress = (
+                    opening_transition_elapsed_ms - opening_transition_switch_ms
+                ) / max(1, opening_transition_fade_in_ms)
+                fade_alpha = int(255 * (1.0 - clamp_float(fade_progress, 0.0, 1.0)))
+
+            if fade_alpha > 0:
+                fade = pygame.Surface((sw, sh), pygame.SRCALPHA)
+                fade.fill((0, 0, 0, max(0, min(255, fade_alpha))))
+                screen.blit(fade, (0, 0))
 
         pygame.display.flip()
 

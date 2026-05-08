@@ -59,18 +59,7 @@
         }
       ]
     },
-    {
-      "id": "hunt_blessing",
-      "label": "狩獵祝福",
-      "text": "接下來 2 場普通戰中，敵人生命值 -30%。",
-      "effects": [
-        {
-          "type": "early_enemy_hp_down",
-          "amount": 2,
-          "ratio": 0.3
-        }
-      ]
-    },
+    
     {
       "id": "scar_sigil",
       "label": "鮮血祭禮",
