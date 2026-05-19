@@ -13,9 +13,9 @@
       "id": "steadfast",
       "name": "堅毅",
       "type": "regen_per_turn",
-      "value": 1,
+      "value": 3,
       "cost": 40,
-      "desc": "每次行動前回復 1 HP",
+      "desc": "每次行動前回復 3 HP",
       "rarity": "常見"
     },
     {
@@ -52,7 +52,7 @@
       "value": 2,
       "cost": 85,
       "desc": "裝備時手牌上限 +2",
-      "rarity": "常見"
+      "rarity": "史詩"
     },
     {
       "id": "golden_cloth_armor",
@@ -117,42 +117,7 @@
       "desc": "一次打出 5 張牌時，每張牌額外追加 4 傷害",
       "rarity": "稀有"
     },
-    {
-      "id": "spade_brand",
-      "name": "黑桃烙印",
-      "type": "spade_brand",
-      "value": 3,
-      "cost": 70,
-      "desc": "每打出 1 張黑桃牌，追加 3 傷害；若全部都是黑桃，額外再追加 20 傷害",
-      "rarity": "稀有"
-    },
-    {
-      "id": "heart_oath",
-      "name": "紅心誓約",
-      "type": "heart_heal",
-      "value": 1,
-      "cost": 70,
-      "desc": "每打出 1 張紅心牌，回復 1 HP；若本次攻擊包含 3 張以上紅心，額外回復 5 HP",
-      "rarity": "史詩"
-    },
-    {
-      "id": "diamond_greed",
-      "name": "方塊貪婪",
-      "type": "diamond_gold_bonus",
-      "value": 3,
-      "cost": 65,
-      "desc": "每打出 1 張方塊牌，本場戰鬥勝利後額外獲得 3 金幣",
-      "rarity": "稀有"
-    },
-    {
-      "id": "club_fang",
-      "name": "梅花毒牙",
-      "type": "club_fang",
-      "value": 2,
-      "cost": 75,
-      "desc": "每打出 1 張梅花牌，使敵人獲得 1 層裂傷；每層裂傷使下一次攻擊追加 2 傷害，觸發後清空",
-      "rarity": "常見"
-    },
+    
     {
       "id": "gambler_eye",
       "name": "賭徒之眼",

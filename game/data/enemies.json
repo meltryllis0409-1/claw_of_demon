@@ -13,7 +13,7 @@
       "tier": "normal",
       "name": "格爾準克",
       "hp": 350,
-      "attack_damage": 3,
+      "attack_damage": 5,
       "attack_timer": 3
     },
     {
@@ -37,7 +37,7 @@
       "tier": "elite",
       "name": "渴血的格爾準克",
       "hp": 550,
-      "attack_damage": 3,
+      "attack_damage": 10,
       "attack_timer": 3,
       "heal_on_attack": 20
     },
@@ -46,7 +46,7 @@
       "tier": "elite",
       "name": "狂躁的格爾準克",
       "hp": 600,
-      "attack_damage": 5,
+      "attack_damage": 13,
       "attack_timer": 1,
       "frenzy_hp_threshold": 100,
       "frenzy_attacks": 2
@@ -56,7 +56,7 @@
       "tier": "boss",
       "name": "警惕的執政者 (Vigilant Exarch)",
       "hp": 1950,
-      "attack_damage": 8,
+      "attack_damage": 19,
       "attack_timer": 2,
       "disable_suit_on_attack": true,
       "disable_suit_turns": 2
@@ -66,7 +66,7 @@
       "tier": "boss",
       "name": "嗜虐的葬送龍騎士",
       "hp": 2700,
-      "attack_damage": 11,
+      "attack_damage": 22,
       "attack_timer": 2,
       "double_damage_chance": 0.25
     },
@@ -75,7 +75,7 @@
       "tier": "normal",
       "name": "荒原盜鼠",
       "hp": 260,
-      "attack_damage": 2,
+      "attack_damage": 3,
       "attack_timer": 1
     },
     {
@@ -117,7 +117,7 @@
       "tier": "normal",
       "name": "鏽劍亡兵",
       "hp": 460,
-      "attack_damage": 4,
+      "attack_damage": 5,
       "attack_timer": 3
     },
     {
@@ -154,7 +154,7 @@
       "hp": 700,
       "attack_damage": 3,
       "attack_timer": 3,
-      "starting_shield": 50
+      "starting_shield": 75
     },
     {
       "id": "ash_scavenger",
@@ -177,7 +177,7 @@
       "tier": "elite",
       "name": "血齒祭司",
       "hp": 720,
-      "attack_damage": 4,
+      "attack_damage": 6,
       "attack_timer": 2,
       "heal_on_attack": 25
     },
@@ -186,7 +186,7 @@
       "tier": "elite",
       "name": "斷腕決鬥者",
       "hp": 650,
-      "attack_damage": 5,
+      "attack_damage": 9,
       "attack_timer": 2,
       "frenzy_hp_threshold": 220,
       "frenzy_attacks": 2
@@ -196,7 +196,7 @@
       "tier": "elite",
       "name": "四相裁決者",
       "hp": 680,
-      "attack_damage": 4,
+      "attack_damage": 12,
       "attack_timer": 2,
       "disable_suit_on_attack": true,
       "disable_suit_turns": 1
@@ -206,7 +206,7 @@
       "tier": "elite",
       "name": "骰骨處刑人",
       "hp": 620,
-      "attack_damage": 5,
+      "attack_damage": 9,
       "attack_timer": 2,
       "double_damage_chance": 0.3
     },
@@ -223,7 +223,7 @@
       "tier": "elite",
       "name": "夜巡獵首者",
       "hp": 580,
-      "attack_damage": 3,
+      "attack_damage": 13,
       "attack_timer": 1,
       "frenzy_hp_threshold": 180,
       "frenzy_attacks": 2
@@ -233,7 +233,7 @@
       "tier": "elite",
       "name": "仲裁者",
       "hp": 500,
-      "attack_damage": 6,
+      "attack_damage": 13,
       "attack_timer": 2,
       "arbiter_damage_threshold": 100,
       "arbiter_damage_reduction_percent": 50,
@@ -245,7 +245,7 @@
       "tier": "boss",
       "name": "瘴爪女王",
       "hp": 2350,
-      "attack_damage": 6,
+      "attack_damage": 17,
       "attack_timer": 3,
       "poison_on_attack": true,
       "poison_stacks_on_attack": 1,
